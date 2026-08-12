@@ -1,0 +1,39 @@
+# 打包产物
+dist/
+build/
+build/
+dist_setup/
+*.exe
+*.zip
+*.pkg
+*.spec.bak
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 运行时日志
+http.log
+
+# 用户本地配置（含数据库连接等，不入库）
+.captrace/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE 自动生成
+.workbuddy/
+
+# 误生成的临时文件
+$null
+$null).Name

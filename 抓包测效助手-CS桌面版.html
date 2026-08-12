@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>抓包测效助手 · 桌面客户端</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ===== Light (default) ===== */
+  --paper:#F7F6F2;
+  --surface:#FFFFFF;
+  --surface-2:#FCFBF9;
+  --surface-3:#F3F1EC;
+  --ink:#1B1B18;
+  --ink-2:#56564F;
+  --muted:#8C8C83;
+  --line:#E7E4DD;
+  --line-2:#F0EEE8;
+  --primary:#0D9488;
+  --primary-ink:#0B7A70;
+  --primary-soft:#E4F3F0;
+  --primary-line:#BFE2DC;
+  --ok:#15803D;        --ok-soft:#E6F3EA;     --ok-line:#C3E3CC;
+  --warn:#B45309;      --warn-soft:#FBEFDC;    --warn-line:#F0D8AE;
+  --danger:#C0392B;    --danger-soft:#FBEAE7;  --danger-line:#F1C7C0;
+  --accent:#E8631E;    /* signal amber for highlights */
+  --grid:rgba(27,27,24,.035);
+  --shadow-sm:0 1px 2px rgba(27,27,24,.05);
+  --shadow:0 2px 8px rgba(27,27,24,.06),0 1px 2px rgba(27,27,24,.04);
+  --shadow-lg:0 12px 32px rgba(27,27,24,.12);
+  --radius:12px; --radius-sm:9px; --radius-xs:6px;
+  --font-ui:"IBM Plex Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-display:"Space Grotesk","IBM Plex Sans","PingFang SC",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --titlebar-h:46px; --statusbar-h:30px; --nav-w:228px; --inspector-w:340px;
+}
+[data-theme="dark"]{
+  --paper:#14161A;
+  --surface:#1C1F24;
+  --surface-2:#20242A;
+  --surface-3:#262B31;
+  --ink:#ECEDEA;
+  --ink-2:#B4B6B0;
+  --muted:#7E817B;
+  --line:#2C3138;
+  --line-2:#24282E;
+  --primary:#2DD4BF;
+  --primary-ink:#5FE3D2;
+  --primary-soft:#0F2E2B;
+  --primary-line:#1C4B45;
+  --ok:#34D27E;        --ok-soft:#0F2C1C;     --ok-line:#1E5236;
+  --warn:#E8A33D;      --warn-soft:#2E2410;   --warn-line:#5A4416;
+  --danger:#F0614F;    --danger-soft:#2E1715; --danger-line:#5A2A25;
+  --accent:#F3903E;
+  --grid:rgba(236,237,234,.04);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 2px 10px rgba(0,0,0,.35);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-ui);background:var(--paper);color:var(--ink);
+  font-size:13px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+  overflow:hidden;
+}
+button{font-family:inherit}
+::selection{background:var(--primary-soft)}
+
+/* ===== App shell ===== */
+.app{display:grid;grid-template-rows:var(--titlebar-h) 1fr var(--statusbar-h);height:100vh}
+
+/* ===== Title bar ===== */
+.titlebar{
+  display:flex;align-items:center;gap:14px;padding:0 12px 0 14px;
+  background:var(--surface);border-bottom:1px solid var(--line);
+  user-select:none;-webkit-app-region:drag;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{
+  width:28px;height:28px;border-radius:8px;background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.brand b{font-family:var(--font-display);font-size:14.5px;letter-spacing:.2px}
+.brand small{display:block;font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.5px;margin-top:-2px}
+.tb-search{
+  flex:1;max-width:420px;margin:0 8px;display:flex;align-items:center;gap:8px;
+  background:var(--surface-3);border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;color:var(--muted);cursor:text;transition:border-color .2s;
+}
+.tb-search:hover{border-color:var(--primary-line)}
+.tb-search .kbd{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink-2)}
+.tb-right{display:flex;align-items:center;gap:10px;margin-left:auto;-webkit-app-region:no-drag}
+.env-switch{
+  display:flex;align-items:center;gap:6px;background:var(--surface-3);border:1px solid var(--line);
+  border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)
+}
+.env-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}
+.icon-btn{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);font-size:15px;
+  transition:.18s
+}
+.icon-btn:hover{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+.proxy-led{
+  display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:500;border:1px solid var(--ok-line);background:var(--ok-soft);color:var(--ok);
+  transition:.18s
+}
+.proxy-led:hover{filter:brightness(.98)}
+.proxy-led .led{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+.proxy-led.off{border-color:var(--line);background:var(--surface-3);color:var(--muted)}
+.proxy-led.off .led{background:var(--muted);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(21,128,61,.4)}70%{box-shadow:0 0 0 6px rgba(21,128,61,0)}100%{box-shadow:0 0 0 0 rgba(21,128,61,0)}}
+.win-ctrl{display:flex;gap:2px;margin-left:4px}
+.win-ctrl div{width:34px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);border-radius:6px;font-size:13px}
+.win-ctrl div:hover{background:var(--surface-3)}
+.win-ctrl .close:hover{background:var(--danger);color:#fff}
+
+/* ===== Body grid ===== */
+.body{display:grid;grid-template-columns:var(--nav-w) 1fr var(--inspector-w);min-height:0}
+.body.no-inspector{grid-template-columns:var(--nav-w) 1fr 0}
+
+/* ===== Sidebar nav ===== */
+.nav{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.nav-scroll{overflow:auto;padding:14px 12px;flex:1}
+.nav-group{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:14px 10px 7px}
+.nav-group:first-child{padding-top:2px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;cursor:pointer;
+  color:var(--ink-2);font-size:13px;font-weight:500;position:relative;transition:.15s;margin-bottom:2px
+}
+.nav-item .ico{width:20px;text-align:center;font-size:15px;filter:grayscale(.2)}
+.nav-item:hover{background:var(--surface-3);color:var(--ink)}
+.nav-item.active{background:var(--primary-soft);color:var(--primary-ink)}
+.nav-item.active::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--primary);border-radius:0 3px 3px 0}
+.nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;font-family:var(--font-mono)}
+.nav-item .badge.ok{background:var(--ok)}
+.nav-foot{padding:12px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.nav-foot .v{font-family:var(--font-mono);color:var(--ink-2)}
+
+/* ===== Workspace ===== */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--paper)}
+.workspace{flex:1;overflow:auto;padding:22px 26px 40px}
+.screen{display:none;animation:fade .25s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:18px}
+.page-head h1{font-family:var(--font-display);font-size:21px;font-weight:600;letter-spacing:.2px}
+.page-head .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+.page-head .spacer{flex:1}
+.crumb{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);margin-bottom:16px;overflow:hidden}
+.card-h{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px}
+.card-h .sub{font-weight:400;color:var(--muted);font-size:12px}
+.card-b{padding:16px}
+.card-b.flush{padding:0}
+
+/* Stat tiles */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;right:-20px;top:-20px;width:70px;height:70px;border-radius:50%;background:var(--primary-soft);opacity:.5}
+.stat .k{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:7px;position:relative}
+.stat .v{font-family:var(--font-display);font-size:27px;font-weight:600;margin-top:5px;position:relative}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:400;font-family:var(--font-ui)}
+.stat .ico{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+
+/* Pills / tags */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:12px;background:var(--surface-3);color:var(--ink-2);font-weight:500}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.ok .dot{background:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.warn .dot{background:var(--warn)}
+.pill.err{background:var(--danger-soft);color:var(--danger)} .pill.err .dot{background:var(--danger)}
+.pill.primary{background:var(--primary-soft);color:var(--primary-ink)} .pill.primary .dot{background:var(--primary)}
+.tag{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--surface-3);color:var(--ink-2);font-weight:500;font-family:var(--font-mono)}
+.tag.crud{background:var(--primary-soft);color:var(--primary-ink)}
+.meth{font-weight:600;font-size:10.5px;padding:2px 7px;border-radius:5px;font-family:var(--font-mono)}
+.m-get{background:var(--primary-soft);color:var(--primary-ink)}
+.m-post{background:var(--ok-soft);color:var(--ok)}
+.m-put{background:var(--warn-soft);color:var(--warn)}
+.m-del{background:var(--danger-soft);color:var(--danger)}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--danger);font-weight:600}.warnc{color:var(--warn);font-weight:600}
+.muted{color:var(--muted)}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:500;transition:.16s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--primary-line);color:var(--primary-ink);background:var(--primary-soft)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-ink);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.danger:hover{background:#a8311f;color:#fff}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 11px;font-size:12px}
+.btn:active{transform:translateY(1px)}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:9px;margin-bottom:15px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+.search input{border:none;outline:none;flex:1;font-size:13px;background:transparent;color:var(--ink)}
+select.inp,input.inp{font-size:13px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+select.inp:focus,input.inp:focus{outline:none;border-color:var(--primary-line);box-shadow:0 0 0 3px var(--primary-soft)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+th{background:var(--surface-2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:hover{background:var(--surface-3)}
+tbody tr:last-child td{border-bottom:none}
+
+/* Split */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* KV */
+.kv{display:flex;border-bottom:1px solid var(--line-2);font-size:12.5px}
+.kv:last-child{border-bottom:none}
+.kv .k{width:150px;color:var(--muted);padding:8px 12px;background:var(--surface-2);flex-shrink:0;font-size:12px}
+.kv .v{padding:8px 12px;flex:1;font-family:var(--font-mono);word-break:break-all}
+.diff-bad{background:var(--danger-soft)}
+
+/* Tabs */
+.tabs{display:inline-flex;gap:3px;background:var(--surface-3);padding:3px;border-radius:10px}
+.tab{padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:500;transition:.15s}
+.tab:hover{color:var(--ink)}
+.tab.active{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
+
+/* Log lines */
+.log-line{font-family:var(--font-mono);font-size:12px;padding:5px 14px;border-bottom:1px solid var(--line-2);white-space:pre-wrap;word-break:break-all}
+.lv-INFO{color:var(--ink-2)} .lv-WARN{color:var(--warn);background:var(--warn-soft)}
+.lv-ERROR{color:var(--danger);background:var(--danger-soft);font-weight:600}
+.lv-STACK{color:var(--accent);background:var(--surface-3);padding-left:30px}
+
+/* AI + Bug */
+.ai-box{background:linear-gradient(180deg,var(--primary-soft),transparent);border:1px solid var(--primary-line);border-radius:var(--radius);padding:16px}
+.ai-step{display:flex;gap:11px;padding:10px 0;border-bottom:1px dashed var(--primary-line)}
+.ai-step:last-child{border-bottom:none}
+.ai-step .n{width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)}
+.bug{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.bug-h{background:var(--danger-soft);color:var(--danger);padding:11px 16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.bug-b{padding:14px 16px}
+.bug-row{margin-bottom:11px}
+.bug-row .lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-family:var(--font-mono)}
+.bug-row .val{font-size:13px}
+.severity{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.sev-high{background:var(--danger);color:#fff}.sev-mid{background:var(--warn);color:#fff}.sev-low{background:var(--muted);color:#fff}
+
+/* Hints */
+.hint{font-size:12px;color:var(--ink-2);background:var(--surface-3);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:9px;padding:11px 14px;margin-bottom:15px}
+.hint b{color:var(--ink)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.flow .step{font-size:12px;padding:6px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-weight:500}
+.flow .step.cur{border-color:var(--primary);color:var(--primary-ink);background:var(--primary-soft)}
+.flow .arr{color:var(--muted)}
+
+/* ===== Inspector (right) ===== */
+.inspector{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;position:relative}
+.divider{position:absolute;left:-3px;top:0;width:6px;height:100%;cursor:col-resize;z-index:5}
+.divider:hover{background:var(--primary-soft)}
+.insp-head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.insp-head .live{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+.insp-body{overflow:auto;padding:14px 16px;flex:1}
+.insp-foot{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.mini{background:var(--surface-3);border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:11px}
+.mini .lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-mono);margin-bottom:5px}
+.mini .val{font-family:var(--font-mono);font-size:12.5px;word-break:break-all}
+.feed{font-family:var(--font-mono);font-size:11.5px;line-height:1.7}
+.feed .t{color:var(--muted)}
+.feed .ok{color:var(--ok)} .feed .bad{color:var(--danger)} .feed .warn{color:var(--warn)}
+
+/* ===== Status bar ===== */
+.statusbar{display:flex;align-items:center;gap:0;background:var(--surface);border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-2);font-family:var(--font-mono);padding:0 4px}
+.statusbar .seg{display:flex;align-items:center;gap:7px;padding:0 13px;height:100%;border-right:1px solid var(--line-2)}
+.statusbar .seg .d{width:7px;height:7px;border-radius:50%}
+.statusbar .seg.d-ok .d{background:var(--ok)} .statusbar .seg.d-warn .d{background:var(--warn)} .statusbar .seg.d-err .d{background:var(--danger)}
+.statusbar .spacer{flex:1}
+.statusbar .seg.r{border-right:none;border-left:1px solid var(--line-2)}
+
+/* Command palette */
+.cm-overlay{position:fixed;inset:0;background:rgba(20,20,18,.32);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;z-index:50;padding-top:12vh}
+.cm-overlay.show{display:flex;animation:fade .15s ease}
+.cm{width:min(620px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}
+.cm-input{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.cm-input input{flex:1;border:none;outline:none;font-size:15px;background:transparent;color:var(--ink);font-family:var(--font-ui)}
+.cm-list{max-height:320px;overflow:auto;padding:6px}
+.cm-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+.cm-item .ico{width:22px;text-align:center;color:var(--muted)}
+.cm-item .k{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--surface-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.cm-item.active,.cm-item:hover{background:var(--primary-soft);color:var(--primary-ink)}
+.cm-item .g{width:100%;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-mono);padding:10px 12px 4px}
+
+/* Context menu */
+.ctx{position:fixed;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:5px;min-width:180px;display:none;z-index:60}
+.ctx.show{display:block}
+.ctx-item{padding:8px 12px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:9px;color:var(--ink-2)}
+.ctx-item:hover{background:var(--primary-soft);color:var(--primary-ink)}
+.ctx-sep{height:1px;background:var(--line);margin:5px 4px}
+
+/* Toast */
+.toast{position:fixed;bottom:42px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.fitem{display:flex;flex-direction:column;gap:4px}
+.fitem label{font-size:11px;color:var(--muted)}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.grid{display:grid;gap:14px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mb0{margin-bottom:0}
+@media(max-width:1180px){.stats{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== TITLE BAR ===================== -->
+  <div class="titlebar">
+    <div class="brand">
+      <div class="logo">🐞</div>
+      <div><b>抓包测效助手</b><small>CAPTURE · VERIFY · FILE</small></div>
+    </div>
+    <div class="tb-search" onclick="openCM()">
+      <span style="font-size:13px">🔎</span>
+      <span style="font-size:12.5px">搜索接口、会话、表、日志…</span>
+      <span class="kbd">Ctrl K</span>
+    </div>
+    <div class="tb-right">
+      <div class="env-switch" onclick="toast('环境切换：测试 / 预发 / 生产')">
+        <span class="env-dot"></span><span id="envLabel">测试环境</span> ▾
+      </div>
+      <div class="proxy-led" id="proxyLed" onclick="toggleProxy()" title="点击启停本地抓包代理">
+        <span class="led"></span><span id="proxyTxt">代理运行中</span>
+      </div>
+      <div class="icon-btn" onclick="toggleTheme()" title="切换主题">🌓</div>
+      <div class="icon-btn" onclick="toggleInspector()" title="显隐信息面板">🧭</div>
+      <div class="win-ctrl">
+        <div title="最小化">—</div>
+        <div title="最大化">▢</div>
+        <div class="close" title="关闭">✕</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BODY ===================== -->
+  <div class="body" id="body">
+    <!-- Sidebar -->
+    <aside class="nav">
+      <div class="nav-scroll">
+        <div class="nav-group">工作台</div>
+        <div class="nav-item active" data-screen="overview"><span class="ico">📊</span>概览</div>
+        <div class="nav-item" data-screen="capture"><span class="ico">📡</span>抓包会话<span class="badge" id="navCap">6</span></div>
+        <div class="nav-group">校验</div>
+        <div class="nav-item" data-screen="inspect"><span class="ico">🧩</span>综合校验<span class="badge">3</span></div>
+        <div class="nav-item" data-screen="config"><span class="ico">⚙️</span>连接配置</div>
+        <div class="nav-group">智能</div>
+        <div class="nav-item" data-screen="ai"><span class="ico">🤖</span>AI 分析与 BUG<span class="badge ok">1</span></div>
+      </div>
+      <div class="nav-foot"><span>🟢</span><span>已连接 4 源</span><span class="v" style="margin-left:auto">v0.5 · 桌面端</span></div>
+    </aside>
+
+    <!-- Workspace -->
+    <main class="main">
+      <div class="workspace">
+        <!-- ===== OVERVIEW ===== -->
+        <section class="screen active" id="screen-overview">
+          <div class="page-head">
+            <div><h1>概览</h1><div class="sub">抓包 → 校验 → 定位 → 提单，一处闭环</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">工作台 / 概览</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--primary-soft);color:var(--primary-ink)">📡</span>抓包会话</div><div class="v">38<small> 条</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--ok-soft);color:var(--ok)">🔁</span>CRUD 接口</div><div class="v">21<small> 条</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--danger-soft);color:var(--danger)">⚠️</span>异常命中</div><div class="v">3<small> 项</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--warn-soft);color:var(--warn)">🤖</span>已生成 BUG</div><div class="v">1<small> 张</small></div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">核心流程 <span class="sub">当前进度一目了然</span></div>
+            <div class="card-b">
+              <div class="flow">
+                <div class="step cur">① 开启代理</div><span class="arr">→</span>
+                <div class="step cur">② 网站操作</div><span class="arr">→</span>
+                <div class="step cur">③ 实时抓包</div><span class="arr">→</span>
+                <div class="step">④ 三方校验</div><span class="arr">→</span>
+                <div class="step err" style="border-color:var(--danger);color:var(--danger);background:var(--danger-soft)">⑤ 异常分析</div><span class="arr">→</span>
+                <div class="step ok" style="border-color:var(--ok);color:var(--ok);background:var(--ok-soft)">⑥ 一键提单</div>
+              </div>
+              <div class="hint mt12 mb0">提示：左侧「抓包会话」选中一条 CRUD 请求，自动联动接口 + 数据库(多表) + 日志三方校验；命中异常可一键触发 AI 分析与 BUG 生成。右侧「实时监听」面板会随操作滚动刷新。</div>
+            </div>
+          </div>
+
+          <div class="grid g2 mt12">
+            <div class="card mb0">
+              <div class="card-h">连接状态</div>
+              <div class="card-b flush">
+                <div class="kv"><div class="k">本地抓包代理</div><div class="v ok">127.0.0.1:8888 · 运行中</div></div>
+                <div class="kv"><div class="k">数据库（测试）</div><div class="v">order_db / user_db · 只读</div></div>
+                <div class="kv"><div class="k">日志源</div><div class="v bad">elk-prod · 超时</div></div>
+                <div class="kv"><div class="k">AI 模型</div><div class="v ok">内部大模型 API · 可用</div></div>
+              </div>
+            </div>
+            <div class="card mb0">
+              <div class="card-h">待处理异常 <span class="sub">点击进入综合校验</span></div>
+              <div class="card-b flush">
+                <table><tbody>
+                  <tr onclick="go('inspect')"><td><span class="meth m-post">POST</span></td><td>order/create</td><td><span class="bad">入库金额错误</span></td></tr>
+                  <tr onclick="go('inspect')"><td><span class="meth m-get">GET</span></td><td>user/info</td><td><span class="warnc">日志 WARN 过多</span></td></tr>
+                  <tr onclick="go('inspect')"><td><span class="meth m-put">PUT</span></td><td>item/stock</td><td><span class="bad">出参缺字段</span></td></tr>
+                </tbody></table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CAPTURE ===== -->
+        <section class="screen" id="screen-capture">
+          <div class="page-head">
+            <div><h1>抓包会话</h1><div class="sub">自动标注 CRUD 类型，点击进入三方校验</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 抓包会话</span>
+          </div>
+          <div class="toolbar">
+            <button class="btn primary" onclick="toast('已导入 capture.saz（38 条会话）')">⬆ 导入 .saz</button>
+            <button class="btn" onclick="toast('实时捕获已开启，请在目标网站操作…')">● 开始实时捕获</button>
+            <div class="search"><span>🔍</span><input placeholder="搜索 URL / 参数 / 关键字…"></div>
+            <select class="inp"><option>全部方法</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+            <select class="inp"><option>全部类型</option><option>新增</option><option>修改</option><option>删除</option><option>查询</option></select>
+          </div>
+          <div class="card mb0">
+            <div class="card-h">会话列表 <span class="sub">实时刷新 · 自动标注</span></div>
+            <div class="card-b flush">
+              <table><thead><tr><th>#</th><th>方法</th><th>Host / Path</th><th>状态</th><th>类型</th><th>耗时</th><th>校验</th><th></th></tr></thead>
+                <tbody>
+                  <tr onclick="go('inspect')"><td>1</td><td><span class="meth m-post">POST</span></td><td>api.test.com /api/order/create</td><td class="ok">200</td><td><span class="tag crud">新增</span></td><td>142ms</td><td class="bad">✗ 异常</td><td>→</td></tr>
+                  <tr onclick="go('inspect')"><td>2</td><td><span class="meth m-put">PUT</span></td><td>api.test.com /api/item/stock</td><td class="ok">200</td><td><span class="tag crud">修改</span></td><td>98ms</td><td class="bad">✗ 异常</td><td>→</td></tr>
+                  <tr onclick="go('inspect')"><td>3</td><td><span class="meth m-get">GET</span></td><td>api.test.com /api/user/info</td><td class="ok">200</td><td><span class="tag crud">查询</span></td><td>61ms</td><td class="warnc">⚠ 日志</td><td>→</td></tr>
+                  <tr onclick="go('inspect')"><td>4</td><td><span class="meth m-del">DELETE</span></td><td>api.test.com /api/cart/12</td><td class="ok">200</td><td><span class="tag crud">删除</span></td><td>54ms</td><td class="ok">✓ 通过</td><td>→</td></tr>
+                  <tr onclick="go('inspect')"><td>5</td><td><span class="meth m-get">GET</span></td><td>api.test.com /api/home/banner</td><td class="ok">200</td><td><span class="tag crud">查询</span></td><td>33ms</td><td class="ok">✓ 通过</td><td>→</td></tr>
+                  <tr onclick="go('inspect')"><td>6</td><td><span class="meth m-post">POST</span></td><td>api.test.com /api/pay/notify</td><td class="bad">500</td><td><span class="tag crud">新增</span></td><td>1201ms</td><td class="bad">✗ 报错</td><td>→</td></tr>
+                </tbody></table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== INSPECT (merge) ===== -->
+        <section class="screen" id="screen-inspect">
+          <div class="page-head">
+            <div><h1>综合校验</h1><div class="sub">接口 + 数据库(多表) + 日志，一屏比对</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 综合校验 · POST /api/order/create</span>
+          </div>
+          <div class="hint mb0">当前会话：<b>POST /api/order/create</b> · 200 · 142ms · 关键字段 <code style="font-family:var(--font-mono)">orderId=88231</code> · 已自动联动三方校验，无需切换菜单。</div>
+
+          <div class="tabs mt12" style="margin-bottom:14px">
+            <div class="tab active" onclick="iTab(this,'i-matrix')">① 一致性矩阵</div>
+            <div class="tab" onclick="iTab(this,'i-api')">② 接口校验</div>
+            <div class="tab" onclick="iTab(this,'i-db')">③ 数据库校验</div>
+            <div class="tab" onclick="iTab(this,'i-log')">④ 日志校验</div>
+            <div style="flex:1"></div>
+            <button class="btn danger sm" onclick="go('ai')">🤖 触发 AI 分析</button>
+          </div>
+
+          <div class="card" id="i-matrix">
+            <div class="card-h">🔍 三方一致性矩阵 <span class="sub">接口入参 / 出参 / 数据库 / 日志 横向比较</span></div>
+            <div class="sub" style="font-size:11px;opacity:.65;margin:-2px 0 6px">※ 矩阵由工具规则比对生成（确定性数值/字符串比较，不依赖 AI）；AI 仅用于不一致时的根因分析。</div>
+            <div class="card-b flush">
+              <table><thead><tr><th>业务字段</th><th>接口入参</th><th>接口出参</th><th>数据库</th><th>服务器日志</th><th>结论</th></tr></thead>
+                <tbody>
+                  <tr><td><b>orderId</b></td><td>88231</td><td>88231</td><td>88231</td><td>88231</td><td class="ok">✓ 一致</td></tr>
+                  <tr class="diff-bad"><td><b>amount / pay_amount</b></td><td class="bad">99.00</td><td class="bad">99.00</td><td class="bad">99.00</td><td>expected <span class="bad">104.00</span></td><td class="bad">✗ 不一致</td></tr>
+                  <tr><td><b>status</b></td><td>—</td><td>PAID</td><td>PAID</td><td>persisted PAID</td><td class="ok">✓ 一致</td></tr>
+                  <tr><td><b>coupon / discount</b></td><td>5</td><td>—</td><td>5</td><td>applied 5</td><td class="ok">✓ 一致</td></tr>
+                </tbody></table>
+            </div>
+            <div class="card-b" style="border-top:1px dashed var(--line)">
+              <span class="bad">✗ 1 项不一致</span> <span class="ok" style="margin-left:10px">✓ 3 项一致</span> <span class="muted" style="margin-left:10px">任意不一致或日志 ERROR 自动触发 AI 分析</span>
+            </div>
+          </div>
+
+          <div class="card mt12" id="i-api">
+            <div class="card-h">🔁 接口校验 <span class="sub">请求 / 响应 并排 · 入参出参差异</span></div>
+            <div class="card-b">
+              <div class="split">
+                <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                  <div style="padding:9px 12px;background:var(--surface-2);font-weight:600">请求 Request · 入参</div>
+                  <div class="kv"><div class="k">Method</div><div class="v">POST /api/order/create</div></div>
+                  <div class="kv"><div class="k">Body</div><div class="v">{ "userId":1024, "skuId":"A88", "amount":<span class="bad">99.00</span>, "coupon":5 }</div></div>
+                  <div class="kv diff-bad"><div class="k">amount 校验</div><div class="v">实际 99.00 ≠ 预期 104.00（未叠加运费）⚠</div></div>
+                </div>
+                <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                  <div style="padding:9px 12px;background:var(--surface-2);font-weight:600">响应 Response · 出参</div>
+                  <div class="kv"><div class="k">Status</div><div class="v ok">200 OK</div></div>
+                  <div class="kv"><div class="k">Body</div><div class="v">{ "code":0, "orderId":"88231", "payAmount":<span class="bad">99.00</span> }</div></div>
+                  <div class="kv diff-bad"><div class="k">payAmount</div><div class="v">99.00 ≠ 预期 104.00 ⚠</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt12" id="i-db">
+            <div class="card-h">🗄️ 数据库校验 <span class="sub">多表联动 · 仅 SELECT</span></div>
+            <div class="card-b">
+              <div class="toolbar" style="margin-bottom:12px">
+                <select class="inp"><option>指定当前业务库 ▾</option><option>order_db（测试）</option><option>user_db（测试）</option><option>dw_hologres（预发）</option></select>
+                <input class="inp" style="width:140px" placeholder="或手动输入库名">
+                <div class="search" style="max-width:240px"><span>🔑</span><input value="orderId = 88231"></div>
+                <button class="btn sm" onclick="go('config')">⚙ 配置</button>
+                <button class="btn sm" onclick="toast('已按校验规则映射 fan-out 多条只读 SELECT')">⚡ 自动构造</button>
+                <button class="btn primary sm" onclick="toast('只读查询执行成功（3 张表）')">执行校验</button>
+              </div>
+              <div class="hint" style="margin-bottom:12px">当前业务库：<b>order_db</b> · 只读已连 · <code style="font-family:var(--font-mono)">POST /api/order/create</code> 关联 <b>3 张表</b>：t_order / t_order_item / t_coupon_record</div>
+              <div style="font-weight:600;margin-bottom:6px;font-size:12.5px">🔗 校验规则映射（可增删）</div>
+              <table style="margin-bottom:12px"><thead><tr><th>表名</th><th>关联字段（来自请求）</th><th>纳入校验</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><b>t_order</b></td><td style="font-family:var(--font-mono)">orderId → order_id</td><td class="ok">✓ 是</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑映射 t_order')">编辑</td></tr>
+                  <tr><td><b>t_order_item</b></td><td style="font-family:var(--font-mono)">orderId → order_id</td><td class="ok">✓ 是</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑映射 t_order_item')">编辑</td></tr>
+                  <tr><td><b>t_coupon_record</b></td><td style="font-family:var(--font-mono)">couponId → coupon_id</td><td class="ok">✓ 是</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑映射 t_coupon_record')">编辑</td></tr>
+                </tbody></table>
+              <div class="muted" style="margin-bottom:10px;font-size:12px">多表字段校验结果 · 共 3 张表 · <span class="ok">2 通过</span> · <span class="bad">1 张含不符</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                  <div style="padding:8px 12px;background:var(--surface-2);font-weight:600;display:flex;justify-content:space-between"><span>🗄️ t_order</span><span class="bad">✗ 1 项不符</span></div>
+                  <table style="font-size:12px"><thead><tr><th>字段</th><th>实际</th><th>期望</th><th>结果</th></tr></thead>
+                    <tbody>
+                      <tr><td>order_id</td><td>88231</td><td>88231</td><td class="ok">✓</td></tr>
+                      <tr style="background:var(--danger-soft)"><td>pay_amount</td><td class="bad">99.00</td><td class="bad">104.00</td><td class="bad">✗</td></tr>
+                      <tr><td>status</td><td>PAID</td><td>PAID</td><td class="ok">✓</td></tr>
+                    </tbody></table>
+                </div>
+                <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                  <div style="padding:8px 12px;background:var(--surface-2);font-weight:600;display:flex;justify-content:space-between"><span>🗄️ t_order_item</span><span class="bad">✗ 1 项不符</span></div>
+                  <table style="font-size:12px"><thead><tr><th>字段</th><th>实际</th><th>期望</th><th>结果</th></tr></thead>
+                    <tbody>
+                      <tr><td>order_id</td><td>88231</td><td>88231</td><td class="ok">✓</td></tr>
+                      <tr><td>sku_id</td><td>A88</td><td>A88</td><td class="ok">✓</td></tr>
+                      <tr style="background:var(--danger-soft)"><td>item_amount</td><td class="bad">99.00</td><td class="bad">104.00</td><td class="bad">✗</td></tr>
+                    </tbody></table>
+                </div>
+                <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;grid-column:1 / -1">
+                  <div style="padding:8px 12px;background:var(--surface-2);font-weight:600;display:flex;justify-content:space-between"><span>🗄️ t_coupon_record</span><span class="ok">✓ 通过</span></div>
+                  <table style="font-size:12px"><thead><tr><th>字段</th><th>实际</th><th>期望</th><th>结果</th></tr></thead>
+                    <tbody>
+                      <tr><td>coupon_id</td><td>5</td><td>5</td><td class="ok">✓</td></tr>
+                      <tr><td>order_id</td><td>88231</td><td>88231</td><td class="ok">✓</td></tr>
+                      <tr><td>discount</td><td>5</td><td>5</td><td class="ok">✓</td></tr>
+                    </tbody></table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt12 mb0" id="i-log">
+            <div class="card-h">📜 日志校验 <span class="sub">按 traceId 关联 · 异常置顶</span></div>
+            <div class="card-b flush">
+              <div class="log-line lv-INFO">10:21:03.212 INFO  [order-svc] receive create req userId=1024 skuId=A88 amount=99.00</div>
+              <div class="log-line lv-WARN">10:21:03.318 WARN  [order-svc] coupon 5 applied, but freight not included in amount calc</div>
+              <div class="log-line lv-ERROR">10:21:03.401 ERROR [order-svc] amount mismatch expected=104.00 actual=99.00 orderId=88231</div>
+              <div class="log-line lv-STACK">at com.shop.order.CalcService.calc(OrderCalc.java:88)</div>
+              <div class="log-line lv-STACK">at com.shop.order.OrderController.create(OrderController.java:42)</div>
+              <div class="log-line lv-INFO">10:21:03.512 INFO  [order-svc] order persisted orderId=88231 status=PAID</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CONFIG ===== -->
+        <section class="screen" id="screen-config">
+          <div class="page-head">
+            <div><h1>连接配置</h1><div class="sub">录入数据库与日志源连接，保存后以只读方式连接</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 连接配置</span>
+          </div>
+          <div class="hint mb0">在此录入<b>数据库连接</b>与<b>日志源</b>的连接信息。保存后工具以<b>只读</b>方式连接：数据库仅执行 SELECT、日志仅检索，禁止任何写操作。配置按"测试/预发/生产"环境分组，切换顶部环境即联动。</div>
+
+          <div class="card mt12">
+            <div class="card-h">🗄️ 数据库连接 <span class="sub">指定业务库的连接信息</span></div>
+            <div class="card-b">
+              <table style="margin-bottom:16px"><thead><tr><th>连接名</th><th>环境</th><th>类型</th><th>地址</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><b>order_db</b></td><td>测试</td><td>MySQL</td><td style="font-family:var(--font-mono)">10.20.3.11:3306 / order_db</td><td class="ok">● 已连</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑 order_db')">编辑</td></tr>
+                  <tr><td><b>user_db</b></td><td>测试</td><td>MySQL</td><td style="font-family:var(--font-mono)">10.20.3.12:3306 / user_db</td><td class="ok">● 已连</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑 user_db')">编辑</td></tr>
+                  <tr><td><b>dw_hologres</b></td><td>预发</td><td>Hologres</td><td style="font-family:var(--font-mono)">hg-xxx:80 / dw</td><td class="muted">○ 未连</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑 dw_hologres')">编辑</td></tr>
+                </tbody></table>
+              <div style="border:1px dashed var(--line);border-radius:10px;padding:14px;background:var(--surface-2)">
+                <div style="font-weight:600;margin-bottom:12px;font-size:12.5px">＋ 新增 / 编辑数据库连接</div>
+                <div class="grid g3">
+                  <div class="fitem"><label>连接名</label><input class="inp" style="width:100%" value="order_db"></div>
+                  <div class="fitem"><label>环境</label><select class="inp" style="width:100%"><option>测试</option><option>预发</option><option>生产</option></select></div>
+                  <div class="fitem"><label>数据库类型</label><select class="inp" style="width:100%"><option>MySQL</option><option>PostgreSQL</option><option>Hologres</option></select></div>
+                  <div class="fitem"><label>Host</label><input class="inp" style="width:100%" value="10.20.3.11"></div>
+                  <div class="fitem"><label>Port</label><input class="inp" style="width:100%" value="3306"></div>
+                  <div class="fitem"><label>Database</label><input class="inp" style="width:100%" value="order_db"></div>
+                  <div class="fitem"><label>用户名</label><input class="inp" style="width:100%" value="readonly_user"></div>
+                  <div class="fitem"><label>密码</label><input class="inp" type="password" style="width:100%" value="********"></div>
+                  <div class="fitem"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12px"><input type="checkbox" checked> 只读模式（禁止写）</label></div>
+                </div>
+                <div class="mt12" style="display:flex;gap:9px">
+                  <button class="btn" onclick="toast('正在测试连接…')">测试连接</button>
+                  <button class="btn primary" onclick="toast('连接已保存（只读）')">保存连接</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb0">
+            <div class="card-h">📜 日志源 <span class="sub">日志路径 / 服务器地址</span></div>
+            <div class="card-b">
+              <table style="margin-bottom:16px"><thead><tr><th>名称</th><th>类型</th><th>路径 / 地址</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td><b>elk-test</b></td><td>ELK</td><td style="font-family:var(--font-mono)">order-prod / user-prod</td><td class="ok">● 已连</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑 elk-test')">编辑</td></tr>
+                  <tr><td><b>order-svc-file</b></td><td>远程文件</td><td style="font-family:var(--font-mono)">/var/log/order-svc/*.log</td><td class="bad">○ 超时</td><td style="color:var(--primary-ink);cursor:pointer" onclick="toast('编辑 order-svc-file')">编辑</td></tr>
+                </tbody></table>
+              <div style="border:1px dashed var(--line);border-radius:10px;padding:14px;background:var(--surface-2)">
+                <div style="font-weight:600;margin-bottom:12px;font-size:12.5px">＋ 新增 / 编辑日志源</div>
+                <div class="grid g3">
+                  <div class="fitem"><label>名称</label><input class="inp" style="width:100%" value="order-svc-file"></div>
+                  <div class="fitem"><label>类型</label><select class="inp" style="width:100%"><option>ELK</option><option>远程文件</option><option>容器日志</option></select></div>
+                  <div class="fitem"><label>索引 / 匹配模式</label><input class="inp" style="width:100%" value="order-prod"></div>
+                  <div class="fitem" style="grid-column:1 / -1"><label>日志路径 / 服务器地址</label><input class="inp" style="width:100%" value="/var/log/order-svc/*.log 或 elk:order-prod"></div>
+                </div>
+                <div class="mt12" style="display:flex;gap:9px">
+                  <button class="btn" onclick="toast('正在测试日志源…')">测试连接</button>
+                  <button class="btn primary" onclick="toast('日志源已保存')">保存日志源</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== AI ===== -->
+        <section class="screen" id="screen-ai">
+          <div class="page-head">
+            <div><h1>AI 分析与 BUG</h1><div class="sub">自动汇总上下文，调用模型根因分析并生成可提交 BUG</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">智能 / AI 分析与 BUG</span>
+          </div>
+          <div class="hint mb0">已自动汇总上下文：请求报文 + 响应报文 + 数据库比对（pay_amount 不符）+ 日志报错（amount mismatch）。点击下方按钮调用 AI 模型分析根因。</div>
+          <div class="ai-box mt12 mb0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <b>🤖 AI 根因分析</b>
+              <button class="btn primary sm" id="aiBtn" onclick="runAI()">▶ 调用 AI 分析</button>
+            </div>
+            <div id="aiResult" style="display:none">
+              <div class="ai-step"><div class="n">1</div><div><b>可能根因（高置信度）</b>：订单金额计算未叠加运费（freight）。日志 WARN 已提示 "freight not included in amount calc"，导致 pay_amount=99.00 而非预期 104.00。</div></div>
+              <div class="ai-step"><div class="n">2</div><div><b>次要疑点（中置信度）</b>：优惠券抵扣逻辑与运费叠加顺序可能存在耦合，建议核查 CalcService.calc() 第 88 行。</div></div>
+              <div class="ai-step"><div class="n">3</div><div><b>影响范围</b>：所有含运费 + 优惠券的订单金额均会偏低，涉及支付对账差异。</div></div>
+              <div class="ai-step"><div class="n">4</div><div><b>建议排查</b>：核对 OrderCalc 金额组成（商品+运费-优惠券），并补充含运费场景的自动化断言。</div></div>
+            </div>
+            <div id="aiLoading" style="display:none" class="muted">⏳ 模型分析中…</div>
+          </div>
+
+          <div class="bug mt12">
+            <div class="bug-h">🐞 可提交 BUG 单 <span class="muted" style="font-weight:400;color:var(--danger)">（一键复制）</span></div>
+            <div class="bug-b">
+              <div class="bug-row"><div class="lab">标题</div><div class="val"><b>【订单】创建订单金额未叠加运费，pay_amount 偏低 5 元</b></div></div>
+              <div class="grid g3" style="margin-bottom:11px">
+                <div class="bug-row mb0"><div class="lab">环境</div><div class="val">测试环境</div></div>
+                <div class="bug-row mb0"><div class="lab">模块</div><div class="val">订单服务 order-svc</div></div>
+                <div class="bug-row mb0"><div class="lab">严重程度</div><div class="val"><span class="severity sev-high">高</span></div></div>
+              </div>
+              <div class="bug-row"><div class="lab">复现步骤</div><div class="val">1. 开启本地代理 → 2. 下单（skuId=A88, coupon=5）→ 3. POST /api/order/create</div></div>
+              <div class="bug-row"><div class="lab">期望结果</div><div class="val">pay_amount = 104.00（99 商品 + 10 运费 − 5 券）</div></div>
+              <div class="bug-row"><div class="lab">实际结果</div><div class="val bad">pay_amount = 99.00（运费未计入）</div></div>
+              <div class="bug-row"><div class="lab">证据</div><div class="val" style="font-family:var(--font-mono);font-size:12px">响应 payAmount=99.00 ｜ DB pay_amount=99.00 ｜ 日志 ERROR amount mismatch expected=104.00</div></div>
+              <div class="bug-row mb0"><div class="lab">AI 根因</div><div class="val">金额计算未叠加运费（CalcService.calc L88），建议补充含运费场景断言。</div></div>
+            </div>
+            <div class="card-b" style="border-top:1px solid var(--line);display:flex;gap:10px">
+              <button class="btn primary" onclick="copyBug()">📋 一键复制（Markdown）</button>
+              <button class="btn" onclick="toast('已复制为 TAPD 格式')">复制为 TAPD</button>
+              <button class="btn" onclick="toast('已复制为 Jira 格式')">复制为 Jira</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Inspector (right) -->
+    <aside class="inspector" id="inspector">
+      <div class="divider" id="divider"></div>
+      <div class="insp-head">
+        <span class="live"></span><b>实时监听</b>
+        <span class="spacer" style="flex:1"></span>
+        <span class="pill ok" style="padding:3px 9px"><span class="dot"></span>live</span>
+      </div>
+      <div class="insp-body">
+        <div class="mini">
+          <div class="lab">当前会话</div>
+          <div class="val">POST /api/order/create</div>
+        </div>
+        <div class="mini">
+          <div class="lab">关键字段</div>
+          <div class="val">orderId = 88231</div>
+        </div>
+        <div class="mini">
+          <div class="lab">三方状态</div>
+          <div class="val"><span class="bad">✗ 接口</span> · <span class="bad">✗ 数据库</span> · <span class="bad">✗ 日志</span></div>
+        </div>
+        <div style="font-weight:600;font-size:12px;margin:4px 0 8px">捕获流</div>
+        <div class="feed" id="feed">
+          <div><span class="t">10:21:03.212 </span><span class="ok">GET</span> /api/home/banner 200</div>
+          <div><span class="t">10:21:03.318 </span><span class="ok">GET</span> /api/user/info 200</div>
+          <div><span class="t">10:21:03.401 </span><span class="bad">POST</span> /api/order/create 200</div>
+          <div><span class="t">10:21:03.512 </span><span class="warn">WARN</span> freight not in calc</div>
+          <div><span class="t">10:21:03.604 </span><span class="bad">ERROR</span> amount mismatch</div>
+        </div>
+      </div>
+      <div class="insp-foot">
+        <button class="btn sm" style="flex:1" onclick="go('inspect')">打开校验</button>
+        <button class="btn primary sm" style="flex:1" onclick="go('ai')">🤖 分析</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== STATUS BAR ===================== -->
+  <div class="statusbar">
+    <div class="seg d-ok"><span class="d"></span>代理 运行中</div>
+    <div class="seg d-ok"><span class="d"></span>DB ×2 已连</div>
+    <div class="seg d-warn"><span class="d"></span>日志 1 超时</div>
+    <div class="seg d-ok"><span class="d"></span>AI 可用</div>
+    <div class="spacer"></div>
+    <div class="seg">捕获 38</div>
+    <div class="seg">异常 3</div>
+    <div class="seg r">UTF-8 · 只读</div>
+  </div>
+</div>
+
+<!-- Command palette -->
+<div class="cm-overlay" id="cmOverlay" onclick="if(event.target===this)closeCM()">
+  <div class="cm">
+    <div class="cm-input"><span>🔎</span><input id="cmInput" placeholder="输入命令或搜索…" autofocus></div>
+    <div class="cm-list" id="cmList">
+      <div class="g">导航</div>
+      <div class="cm-item" data-go="overview"><span class="ico">📊</span>前往 概览</div>
+      <div class="cm-item" data-go="capture"><span class="ico">📡</span>前往 抓包会话</div>
+      <div class="cm-item" data-go="inspect"><span class="ico">🧩</span>前往 综合校验</div>
+      <div class="cm-item" data-go="config"><span class="ico">⚙️</span>前往 连接配置</div>
+      <div class="cm-item" data-go="ai"><span class="ico">🤖</span>前往 AI 分析与 BUG</div>
+      <div class="g">操作</div>
+      <div class="cm-item" onclick="toggleProxy();closeCM()"><span class="ico">🟢</span>启停本地抓包代理<span class="k">P</span></div>
+      <div class="cm-item" onclick="toggleTheme();closeCM()"><span class="ico">🌓</span>切换深浅主题<span class="k">T</span></div>
+      <div class="cm-item" onclick="toggleInspector();closeCM()"><span class="ico">🧭</span>显隐信息面板<span class="k">I</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div class="ctx" id="ctx">
+  <div class="ctx-item" onclick="go('inspect');hideCtx()">🔍 打开综合校验</div>
+  <div class="ctx-item" onclick="go('ai');hideCtx()">🤖 触发 AI 分析</div>
+  <div class="ctx-item" onclick="toast('已复制请求报文');hideCtx()">📋 复制请求报文</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="toast('已标记为例外忽略');hideCtx()">🚫 标记为例外忽略</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const titles={overview:'概览',capture:'抓包会话',inspect:'综合校验',config:'连接配置',ai:'AI分析与BUG'};
+function go(screen){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelector('.workspace').scrollTop=0;
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>go(n.dataset.screen)));
+
+function iTab(el,id){
+  document.querySelectorAll('#screen-inspect .tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const c=document.querySelector('.workspace');const e=document.getElementById(id);
+  c.scrollTop+=e.getBoundingClientRect().top-c.getBoundingClientRect().top-70;
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+function toggleTheme(){
+  const h=document.documentElement;
+  h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark');
+  toast('主题：'+(h.getAttribute('data-theme')==='dark'?'深色':'浅色'));
+}
+function toggleInspector(){
+  document.getElementById('body').classList.toggle('no-inspector');
+}
+function toggleProxy(){
+  const led=document.getElementById('proxyLed');const txt=document.getElementById('proxyTxt');
+  const on=led.classList.toggle('off');
+  txt.textContent=on?'代理已停止':'代理运行中';
+  toast(on?'本地抓包代理已停止':'本地抓包代理已启动');
+}
+
+/* Command palette */
+function openCM(){document.getElementById('cmOverlay').classList.add('show');document.getElementById('cmInput').focus();}
+function closeCM(){document.getElementById('cmOverlay').classList.remove('show');}
+document.getElementById('cmList').querySelectorAll('[data-go]').forEach(i=>i.addEventListener('click',()=>{go(i.dataset.go);closeCM();}));
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCM();}
+  if(e.key==='Escape'){closeCM();hideCtx();}
+});
+
+/* Context menu */
+function showCtx(x,y){const c=document.getElementById('ctx');c.style.left=x+'px';c.style.top=y+'px';c.classList.add('show');}
+function hideCtx(){document.getElementById('ctx').classList.remove('show');}
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('#screen-capture tbody tr')){e.preventDefault();showCtx(e.clientX,e.clientY);}
+});
+document.addEventListener('click',()=>hideCtx());
+
+/* Resizable inspector */
+(function(){
+  const d=document.getElementById('divider'),body=document.getElementById('body');
+  let drag=false;
+  d.addEventListener('mousedown',e=>{drag=true;document.body.style.cursor='col-resize';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const w=window.innerWidth-e.clientX;
+    const nw=Math.max(260,Math.min(520,w));
+    document.documentElement.style.setProperty('--inspector-w',nw+'px');
+  });
+  document.addEventListener('mouseup',()=>{drag=false;document.body.style.cursor='';});
+})();
+
+function runAI(){
+  document.getElementById('aiBtn').style.display='none';
+  document.getElementById('aiLoading').style.display='block';
+  setTimeout(()=>{document.getElementById('aiLoading').style.display='none';document.getElementById('aiResult').style.display='block';},900);
+}
+function copyBug(){
+  const md=`# 【订单】创建订单金额未叠加运费，pay_amount 偏低 5 元
+
+- 环境：测试环境
+- 模块：订单服务 order-svc
+- 严重程度：高
+- 复现步骤：1) 开启本地代理 2) 下单(skuId=A88,coupon=5) 3) POST /api/order/create
+- 期望结果：pay_amount = 104.00（99+10运费-5券）
+- 实际结果：pay_amount = 99.00（运费未计入）
+- 证据：响应 payAmount=99.00 | DB pay_amount=99.00 | 日志 ERROR amount mismatch expected=104.00
+- AI 根因：金额计算未叠加运费(CalcService.calc L88)，建议补充含运费场景断言。`;
+  navigator.clipboard.writeText(md).then(()=>toast('BUG 单已复制（Markdown）')).catch(()=>toast('复制失败，请手动复制'));
+}
+</script>
+</body>
+</html>

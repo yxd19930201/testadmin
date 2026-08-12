@@ -1,0 +1,29 @@
+[project]
+name = "captrace"
+version = "0.1.0"
+description = "抓包测效助手 - 测试工程师抓包→三方一致性校验→AI根因→一键BUG"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy>=2.0",   # 数据库只读连接（按 db_type 适配 mysql/postgres/hologres）
+    "requests>=2.31",    # AI 网关 / ELK 日志检索（可选，核心比对不依赖）
+    "pyyaml>=6.0",       # 配置文件解析
+    "fastapi>=0.110",    # 实时捕获接收服务（方案A）；核心逻辑不依赖
+    "uvicorn>=0.29",
+    "pywebview>=5.0",    # C/S 桌面壳（GUI），加载 assets/app.html
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+build = ["pyinstaller>=6.0", "pywebview>=5.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["captrace*"]
+
+[project.scripts]
+captrace = "captrace.main:cli"
+captrace-gui = "captrace.app_gui:main"

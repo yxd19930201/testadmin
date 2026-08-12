@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>抓包测效助手 · 桌面客户端</title>
+<style>
+/* ===== 注：Google Fonts 已移除，改用系统字体栈，保证离线打包可用 ===== */
+:root{
+  /* ===== Light (default) ===== */
+  --paper:#F7F6F2;
+  --surface:#FFFFFF;
+  --surface-2:#FCFBF9;
+  --surface-3:#F3F1EC;
+  --ink:#1B1B18;
+  --ink-2:#56564F;
+  --muted:#8C8C83;
+  --line:#E7E4DD;
+  --line-2:#F0EEE8;
+  --primary:#0D9488;
+  --primary-ink:#0B7A70;
+  --primary-soft:#E4F3F0;
+  --primary-line:#BFE2DC;
+  --ok:#15803D;        --ok-soft:#E6F3EA;     --ok-line:#C3E3CC;
+  --warn:#B45309;      --warn-soft:#FBEFDC;    --warn-line:#F0D8AE;
+  --danger:#C0392B;    --danger-soft:#FBEAE7;  --danger-line:#F1C7C0;
+  --accent:#E8631E;    /* signal amber for highlights */
+  --grid:rgba(27,27,24,.035);
+  --shadow-sm:0 1px 2px rgba(27,27,24,.05);
+  --shadow:0 2px 8px rgba(27,27,24,.06),0 1px 2px rgba(27,27,24,.04);
+  --shadow-lg:0 12px 32px rgba(27,27,24,.12);
+  --radius:12px; --radius-sm:9px; --radius-xs:6px;
+  --font-ui:"IBM Plex Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --font-display:"Space Grotesk","IBM Plex Sans","PingFang SC",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --titlebar-h:46px; --statusbar-h:30px; --nav-w:228px; --inspector-w:340px;
+}
+[data-theme="dark"]{
+  --paper:#14161A;
+  --surface:#1C1F24;
+  --surface-2:#20242A;
+  --surface-3:#262B31;
+  --ink:#ECEDEA;
+  --ink-2:#B4B6B0;
+  --muted:#7E817B;
+  --line:#2C3138;
+  --line-2:#24282E;
+  --primary:#2DD4BF;
+  --primary-ink:#5FE3D2;
+  --primary-soft:#0F2E2B;
+  --primary-line:#1C4B45;
+  --ok:#34D27E;        --ok-soft:#0F2C1C;     --ok-line:#1E5236;
+  --warn:#E8A33D;      --warn-soft:#2E2410;   --warn-line:#5A4416;
+  --danger:#F0614F;    --danger-soft:#2E1715; --danger-line:#5A2A25;
+  --accent:#F3903E;
+  --grid:rgba(236,237,234,.04);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 2px 10px rgba(0,0,0,.35);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-ui);background:var(--paper);color:var(--ink);
+  font-size:13px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+  overflow:hidden;
+}
+button{font-family:inherit}
+::selection{background:var(--primary-soft)}
+
+/* ===== App shell ===== */
+.app{display:grid;grid-template-rows:var(--titlebar-h) 1fr var(--statusbar-h);height:100vh}
+
+/* ===== Title bar ===== */
+.titlebar{
+  display:flex;align-items:center;gap:14px;padding:0 12px 0 14px;
+  background:var(--surface);border-bottom:1px solid var(--line);
+  user-select:none;-webkit-app-region:drag;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{
+  width:28px;height:28px;border-radius:8px;background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.brand b{font-family:var(--font-display);font-size:14.5px;letter-spacing:.2px}
+.brand small{display:block;font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.5px;margin-top:-2px}
+.tb-search{
+  flex:1;max-width:420px;margin:0 8px;display:flex;align-items:center;gap:8px;
+  background:var(--surface-3);border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;color:var(--muted);cursor:text;transition:border-color .2s;
+}
+.tb-search:hover{border-color:var(--primary-line)}
+.tb-search .kbd{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink-2)}
+.tb-right{display:flex;align-items:center;gap:10px;margin-left:auto;-webkit-app-region:no-drag}
+.env-switch{
+  display:flex;align-items:center;gap:6px;background:var(--surface-3);border:1px solid var(--line);
+  border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)
+}
+.env-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}
+.icon-btn{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);font-size:15px;
+  transition:.18s
+}
+.icon-btn:hover{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+.proxy-led{
+  display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:500;border:1px solid var(--ok-line);background:var(--ok-soft);color:var(--ok);
+  transition:.18s;user-select:none
+}
+.proxy-led:hover{filter:brightness(.98);border-color:var(--primary-line)}
+.proxy-led .led{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+.proxy-led.off{border-color:var(--line);background:var(--surface-3);color:var(--muted);animation:pulse-warn 2s infinite}
+.proxy-led.off .led{background:var(--danger);animation:none;box-shadow:0 0 6px var(--danger)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(21,128,61,.4)}70%{box-shadow:0 0 0 6px rgba(21,128,61,0)}100%{box-shadow:0 0 0 0 rgba(21,128,61,0)}}
+@keyframes pulse-warn{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.2)}50%{box-shadow:0 0 0 5px rgba(229,72,77,0)}}
+.win-ctrl{display:flex;gap:2px;margin-left:4px}
+.win-ctrl div{width:34px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);border-radius:6px;font-size:13px}
+.win-ctrl div:hover{background:var(--surface-3)}
+.win-ctrl .close:hover{background:var(--danger);color:#fff}
+
+/* ===== Body grid ===== */
+.body{display:grid;grid-template-columns:var(--nav-w) 1fr var(--inspector-w);min-height:0}
+.body.no-inspector{grid-template-columns:var(--nav-w) 1fr 0}
+
+/* ===== Sidebar nav ===== */
+.nav{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.nav-scroll{overflow:auto;padding:14px 12px;flex:1}
+.nav-group{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:14px 10px 7px}
+.nav-group:first-child{padding-top:2px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;cursor:pointer;
+  color:var(--ink-2);font-size:13px;font-weight:500;position:relative;transition:.15s;margin-bottom:2px
+}
+.nav-item .ico{width:20px;text-align:center;font-size:15px;filter:grayscale(.2)}
+.nav-item:hover{background:var(--surface-3);color:var(--ink)}
+.nav-item.active{background:var(--primary-soft);color:var(--primary-ink)}
+.nav-item.active::before{content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--primary);border-radius:0 3px 3px 0}
+.nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;font-family:var(--font-mono)}
+.nav-item .badge.ok{background:var(--ok)}
+.nav-foot{padding:12px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.nav-foot .v{font-family:var(--font-mono);color:var(--ink-2)}
+
+/* ===== Workspace ===== */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--paper)}
+.workspace{flex:1;overflow:auto;padding:22px 26px 40px}
+.screen{display:none;animation:fade .25s ease}
+.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:18px}
+.page-head h1{font-family:var(--font-display);font-size:21px;font-weight:600;letter-spacing:.2px}
+.page-head .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+.page-head .spacer{flex:1}
+.crumb{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);margin-bottom:16px;overflow:hidden}
+.card-h{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px}
+.card-h .sub{font-weight:400;color:var(--muted);font-size:12px}
+.card-b{padding:16px}
+.card-b.flush{padding:0}
+
+/* Stat tiles */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;right:-20px;top:-20px;width:70px;height:70px;border-radius:50%;background:var(--primary-soft);opacity:.5}
+.stat .k{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:7px;position:relative}
+.stat .v{font-family:var(--font-display);font-size:27px;font-weight:600;margin-top:5px;position:relative}
+.stat .v small{font-size:13px;color:var(--muted);font-weight:400;font-family:var(--font-ui)}
+.stat .ico{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+
+/* Pills / tags */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:12px;background:var(--surface-3);color:var(--ink-2);font-weight:500}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.ok .dot{background:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.warn .dot{background:var(--warn)}
+.pill.err{background:var(--danger-soft);color:var(--danger)} .pill.err .dot{background:var(--danger)}
+.pill.primary{background:var(--primary-soft);color:var(--primary-ink)} .pill.primary .dot{background:var(--primary)}
+.tag{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--surface-3);color:var(--ink-2);font-weight:500;font-family:var(--font-mono)}
+.tag.crud{background:var(--primary-soft);color:var(--primary-ink)}
+.meth{font-weight:600;font-size:10.5px;padding:2px 7px;border-radius:5px;font-family:var(--font-mono)}
+.m-get{background:var(--primary-soft);color:var(--primary-ink)}
+.m-post{background:var(--ok-soft);color:var(--ok)}
+.m-put{background:var(--warn-soft);color:var(--warn)}
+.m-del{background:var(--danger-soft);color:var(--danger)}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--danger);font-weight:600}.warnc{color:var(--warn);font-weight:600}
+.muted{color:var(--muted)}
+
+/* Buttons */
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:500;transition:.16s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--primary-line);color:var(--primary-ink);background:var(--primary-soft)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-ink);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.danger:hover{background:#a8311f;color:#fff}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 11px;font-size:12px}
+.btn:active{transform:translateY(1px)}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:9px;margin-bottom:15px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 12px}
+.search input{border:none;outline:none;flex:1;font-size:13px;background:transparent;color:var(--ink)}
+.inp,select.inp,input.inp,textarea.inp{font-size:13px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .18s,box-shadow .18s}
+.inp::placeholder,select.inp::placeholder,input.inp::placeholder,textarea.inp::placeholder{color:var(--muted)}
+.inp:focus,select.inp:focus,input.inp:focus,textarea.inp:focus{border-color:var(--primary-line);box-shadow:0 0 0 3px var(--primary-soft)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11.5px;color:var(--muted);font-weight:500}
+.field input.inp,.field textarea.inp{width:100%}
+.field textarea.inp{min-height:110px;resize:vertical;line-height:1.6;font-size:12.5px}
+.cfg-list{display:flex;flex-direction:column;gap:8px}
+.cfg-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.cfg-row-main{flex:1;min-width:0}
+.cfg-row-title{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cfg-row-sub{font-size:11.5px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cfg-row-actions{display:flex;gap:6px;flex-shrink:0}
+.tag{font-size:10.5px;padding:1px 7px;border-radius:6px;background:var(--primary-soft);color:var(--primary);font-weight:600;border:1px solid var(--primary-line)}
+.tag.soft{background:var(--surface-3);color:var(--ink-2);border-color:var(--line)}
+.btn.xs{padding:4px 9px;font-size:11.5px}
+.btn.danger{color:#E5484D;border-color:#F3C2C4;background:var(--surface)}
+.btn.danger:hover{background:#FCECEC}
+.btn.sm{padding:6px 12px;font-size:12.5px}
+.fitem{display:flex;flex-direction:column;gap:5px}
+.fitem label{font-size:11.5px;color:var(--muted);font-weight:500}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+th{background:var(--surface-2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:hover{background:var(--surface-3)}
+tbody tr:last-child td{border-bottom:none}
+
+/* Split */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* KV */
+.kv{display:flex;border-bottom:1px solid var(--line-2);font-size:12.5px}
+.kv:last-child{border-bottom:none}
+.kv .k{width:150px;color:var(--muted);padding:8px 12px;background:var(--surface-2);flex-shrink:0;font-size:12px}
+.kv .v{padding:8px 12px;flex:1;font-family:var(--font-mono);word-break:break-all}
+.diff-bad{background:var(--danger-soft)}
+
+/* Tabs */
+.tabs{position:sticky;top:0;z-index:10;display:inline-flex;gap:3px;background:var(--paper);border:1px solid var(--line);padding:4px;border-radius:11px;margin-bottom:14px;align-self:flex-start}
+.tab{padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:500;transition:.15s;white-space:nowrap}
+.tab:hover{color:var(--ink);background:var(--surface-2)}
+.tab.active{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Log lines */
+.log-line{font-family:var(--font-mono);font-size:12px;padding:5px 14px;border-bottom:1px solid var(--line-2);white-space:pre-wrap;word-break:break-all}
+.lv-INFO{color:var(--ink-2)} .lv-WARN{color:var(--warn);background:var(--warn-soft)}
+.lv-ERROR{color:var(--danger);background:var(--danger-soft);font-weight:600}
+.lv-STACK{color:var(--accent);background:var(--surface-3);padding-left:30px}
+
+/* AI + Bug */
+.ai-box{background:linear-gradient(180deg,var(--primary-soft),transparent);border:1px solid var(--primary-line);border-radius:var(--radius);padding:16px}
+.ai-step{display:flex;gap:11px;padding:10px 0;border-bottom:1px dashed var(--primary-line)}
+.ai-step:last-child{border-bottom:none}
+.ai-step .n{width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-mono)}
+.bug{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.bug-h{background:var(--danger-soft);color:var(--danger);padding:11px 16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.bug-b{padding:14px 16px}
+.bug-row{margin-bottom:11px}
+.bug-row .lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-family:var(--font-mono)}
+.bug-row .val{font-size:13px}
+.severity{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.sev-high{background:var(--danger);color:#fff}.sev-mid{background:var(--warn);color:#fff}.sev-low{background:var(--muted);color:#fff}
+
+/* Hints */
+.hint{font-size:12px;color:var(--ink-2);background:var(--surface-3);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:9px;padding:11px 14px;margin-bottom:15px}
+.hint b{color:var(--ink)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.flow .step{font-size:12px;padding:6px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-weight:500}
+.flow .step.cur{border-color:var(--primary);color:var(--primary-ink);background:var(--primary-soft)}
+.flow .arr{color:var(--muted)}
+
+/* ===== Inspector (right) ===== */
+.inspector{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;position:relative}
+.divider{position:absolute;left:-3px;top:0;width:6px;height:100%;cursor:col-resize;z-index:5}
+.divider:hover{background:var(--primary-soft)}
+.insp-head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.insp-head .live{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+.insp-body{overflow:auto;padding:14px 16px;flex:1}
+.insp-foot{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.mini{background:var(--surface-3);border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:11px}
+.mini .lab{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-mono);margin-bottom:5px}
+.mini .val{font-family:var(--font-mono);font-size:12.5px;word-break:break-all}
+.feed{font-family:var(--font-mono);font-size:11.5px;line-height:1.7}
+.feed .t{color:var(--muted)}
+.feed .ok{color:var(--ok)} .feed .bad{color:var(--danger)} .feed .warn{color:var(--warn)}
+
+/* ===== Status bar ===== */
+.statusbar{display:flex;align-items:center;gap:0;background:var(--surface);border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-2);font-family:var(--font-mono);padding:0 4px}
+.statusbar .seg{display:flex;align-items:center;gap:7px;padding:0 13px;height:100%;border-right:1px solid var(--line-2)}
+.statusbar .seg .d{width:7px;height:7px;border-radius:50%}
+.statusbar .seg.d-ok .d{background:var(--ok)} .statusbar .seg.d-warn .d{background:var(--warn)} .statusbar .seg.d-err .d{background:var(--danger)}
+.statusbar .spacer{flex:1}
+.statusbar .seg.r{border-right:none;border-left:1px solid var(--line-2)}
+
+/* Command palette */
+.cm-overlay{position:fixed;inset:0;background:rgba(20,20,18,.32);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;z-index:50;padding-top:12vh}
+.cm-overlay.show{display:flex;animation:fade .15s ease}
+.cm{width:min(620px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}
+.cm-input{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.cm-input input{flex:1;border:none;outline:none;font-size:15px;background:transparent;color:var(--ink);font-family:var(--font-ui)}
+.cm-list{max-height:320px;overflow:auto;padding:6px}
+.cm-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+.cm-item .ico{width:22px;text-align:center;color:var(--muted)}
+.cm-item .k{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--surface-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.cm-item.active,.cm-item:hover{background:var(--primary-soft);color:var(--primary-ink)}
+.cm-item .g{width:100%;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-mono);padding:10px 12px 4px}
+
+/* Context menu */
+.ctx{position:fixed;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:5px;min-width:180px;display:none;z-index:60}
+.ctx.show{display:block}
+.ctx-item{padding:8px 12px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:9px;color:var(--ink-2)}
+.ctx-item:hover{background:var(--primary-soft);color:var(--primary-ink)}
+.ctx-sep{height:1px;background:var(--line);margin:5px 4px}
+
+/* Toast */
+.toast{position:fixed;bottom:42px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.fitem{display:flex;flex-direction:column;gap:4px}
+.fitem label{font-size:11px;color:var(--muted)}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.grid{display:grid;gap:14px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mb0{margin-bottom:0}
+@media(max-width:1180px){.stats{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== TITLE BAR ===================== -->
+  <div class="titlebar">
+    <div class="brand">
+      <div class="logo">🐞</div>
+      <div><b>抓包测效助手</b><small id="brandSub">CAPTURE · VERIFY · FILE</small></div>
+    </div>
+    <div class="tb-search" onclick="openCM()">
+      <span style="font-size:13px">🔎</span>
+      <span style="font-size:12.5px">搜索接口、会话、表、日志…</span>
+      <span class="kbd">Ctrl K</span>
+    </div>
+    <div class="tb-right">
+      <div class="env-switch" onclick="cycleEnv()">
+        <span class="env-dot"></span><span id="envLabel">测试环境</span> ▾
+      </div>
+      <div class="proxy-led off" id="proxyLed" onclick="toggleProxy()" title="点击启停本地接收服务（Fiddler 推送）">
+        <span class="led"></span><span id="proxyTxt">代理未启动</span>
+      </div>
+      <div class="icon-btn" onclick="toggleTheme()" title="切换主题">🌓</div>
+      <div class="icon-btn" onclick="toggleInspector()" title="显隐信息面板">🧭</div>
+      <div class="win-ctrl">
+        <div title="最小化" onclick="winMin()">—</div>
+        <div id="winMaxBtn" title="最大化" onclick="winMax()">▢</div>
+        <div class="close" title="关闭" onclick="winClose()">✕</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BODY ===================== -->
+  <div class="body" id="body">
+    <!-- Sidebar -->
+    <aside class="nav">
+      <div class="nav-scroll">
+        <div class="nav-group">工作台</div>
+        <div class="nav-item active" data-screen="overview"><span class="ico">📊</span>概览</div>
+        <div class="nav-item" data-screen="capture"><span class="ico">📡</span>抓包会话<span class="badge" id="navCap">0</span></div>
+        <div class="nav-group">校验</div>
+        <div class="nav-item" data-screen="inspect"><span class="ico">🧩</span>综合校验<span class="badge" id="navInspect">0</span></div>
+        <div class="nav-item" data-screen="config"><span class="ico">⚙️</span>连接配置</div>
+        <div class="nav-group">智能</div>
+        <div class="nav-item" data-screen="ai"><span class="ico">🤖</span>AI 分析与 BUG<span class="badge ok" id="navAi">0</span></div>
+      </div>
+      <div class="nav-foot"><span>🟢</span><span>已连接 4 源</span><span class="v" style="margin-left:auto" id="navVer">v0.1.0 · 桌面端</span></div>
+    </aside>
+
+    <!-- Workspace -->
+    <main class="main">
+      <div class="workspace">
+        <!-- ===== OVERVIEW ===== -->
+        <section class="screen active" id="screen-overview">
+          <div class="page-head">
+            <div><h1>概览</h1><div class="sub">抓包 → 校验 → 定位 → 提单，一处闭环</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">工作台 / 概览</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--primary-soft);color:var(--primary-ink)">📡</span>抓包会话</div><div class="v" id="statCap">0<small> 条</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--ok-soft);color:var(--ok)">🔁</span>CRUD 接口</div><div class="v" id="statCrud">0<small> 条</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--danger-soft);color:var(--danger)">⚠️</span>异常命中</div><div class="v" id="statAnomaly">0<small> 项</small></div></div>
+            <div class="stat"><div class="k"><span class="ico" style="background:var(--warn-soft);color:var(--warn)">🤖</span>已生成 BUG</div><div class="v" id="statBug">0<small> 张</small></div></div>
+          </div>
+
+          <div class="card" style="background:linear-gradient(180deg,var(--primary-soft),transparent);border-color:var(--primary-line)">
+            <div class="card-h">🟢 开启实时捕获 <span class="sub" id="capModeDesc">Fiddler 推送模式：工具启动接收服务，Fiddler 负责抓包</span></div>
+            <div class="card-b">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                <button class="btn primary" id="overviewCapBtn" onclick="toggleProxyFromCap()">● 开始实时捕获</button>
+                <label class="sub">捕获方式：</label>
+                <select class="inp" id="capMode" onchange="onCapModeChange()" style="width:auto">
+                  <option value="fiddler">Fiddler 推送（9090）</option>
+                  <option value="local">本地代理抓包（9091）</option>
+                </select>
+              </div>
+
+              <!-- 本地代理模式：域名过滤 + 上游代理 -->
+              <div id="localProxyCfg" style="display:none;margin-bottom:12px;border:1px dashed var(--line);border-radius:var(--radius-xs);padding:12px">
+                <div class="sub" style="margin-bottom:8px">浏览器 / App 把 HTTP 代理指向 <b style="color:var(--primary)">127.0.0.1:9091</b> 即可抓包。<b>HTTPS</b> 仅能记录连接元数据（域名/状态/耗时），无法解密 body。</div>
+                <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap">
+                  <div class="field" style="flex:1;min-width:160px"><label>域名过滤</label>
+                    <select class="inp" id="domainFilterMode">
+                      <option value="off">不过滤（全部抓取）</option>
+                      <option value="whitelist">白名单（只抓这些域名）</option>
+                      <option value="blacklist">黑名单（排除这些域名）</option>
+                    </select>
+                  </div>
+                  <div class="field" style="flex:2;min-width:240px"><label>域名（逗号分隔，支持包含匹配）</label>
+                    <input class="inp" id="domainFilterList" placeholder="如 shop.test,api.pay.com" />
+                  </div>
+                </div>
+                <div style="display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap;margin-top:10px">
+                  <div class="field" style="flex:2;min-width:260px"><label>上游代理（可选）</label>
+                    <input class="inp" id="upstreamProxy" placeholder="需走 VPN 才可达的域名时填，如 http://127.0.0.1:7897；不用就留空" />
+                  </div>
+                  <div class="field" style="flex:1;min-width:160px"><label>本地代理端口</label>
+                    <input class="inp" id="proxyPort" value="9091" />
+                  </div>
+                </div>
+                <div class="sub" style="margin-top:8px;color:var(--ink-3)">说明：上游代理留空则直连目标；若目标域名需经 VPN（Clash/SakuraCat/其他）才能访问，填该工具的代理地址即可，助手不绑定任何特定软件。</div>
+              </div>
+
+              <div class="hint" id="capWorkHint" style="border-left-color:var(--primary);margin:0 0 12px">
+                <b>工作原理：</b>本工具不直接抓包，而是接收 Fiddler 抓到的请求。浏览器 / App 仍然走 Fiddler 代理（默认 127.0.0.1:8888），由 Fiddler 通过 CustomRules 实时把每个完成的 session POST 到本工具。
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div><b>配置步骤：</b></div>
+                <button class="btn" id="capStepsToggle" onclick="toggleCapSteps()">▸ 展开配置步骤</button>
+              </div>
+              <div id="capSteps" style="display:none;flex-direction:column;gap:10px">
+                <div id="fiddlerSteps">
+                  <ol style="margin-left:18px;line-height:1.8;color:var(--ink-2)">
+                    <li>点击上方按钮，看到顶部状态变为「代理运行中」。</li>
+                    <li>打开 Fiddler，进入 <b>Rules → Customize Rules</b>（快捷键 Ctrl+R）。</li>
+                    <li>找到 <code>OnDoneResponse</code> 函数，在函数末尾粘贴下方的脚本。</li>
+                    <li>保存 CustomRules，Fiddler 会自动重载脚本。</li>
+                    <li>在浏览器 / App 中正常操作，请求会自动出现在「抓包会话」页。</li>
+                  </ol>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <span class="sub">Fiddler CustomRules 脚本</span>
+                    <button class="btn" onclick="copyFiddlerScript()">📋 复制脚本</button>
+                  </div>
+                  <pre id="fiddlerScript" style="max-height:260px;overflow:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:10px;font-size:12px;color:var(--ink);white-space:pre-wrap;word-break:break-all">import System.Net;
+
+static function OnDoneResponse(oSession: Session) {
+    if (oSession.isTunnel) return;
+
+    var payload = {
+        method: oSession.RequestMethod,
+        url: oSession.fullUrl,
+        status_code: oSession.responseCode,
+        request_body: '',
+        response_body: '',
+        trace_id: ''
+    };
+    try { payload.request_body = oSession.GetRequestBodyAsString(); } catch(e) { payload.request_body = ''; }
+    try { payload.response_body = oSession.GetResponseBodyAsString(); } catch(e) { payload.response_body = ''; }
+    if (oSession.oRequest.headers.Exists('x-trace-id')) {
+        payload.trace_id = oSession.oRequest.headers['x-trace-id'];
+    } else if (oSession.oRequest.headers.Exists('trace-id')) {
+        payload.trace_id = oSession.oRequest.headers['trace-id'];
+    }
+
+    try {
+        var wc = new System.Net.WebClient();
+        wc.Headers.Add('Content-Type', 'application/json');
+        wc.UploadString('http://127.0.0.1:9090/ingest', 'POST', Fiddler.WebFormats.JSON.JsonEncode(payload));
+    } catch(e) {
+        // 推送失败时静默忽略，避免阻塞 Fiddler
+    }
+}</pre>
+                </div>
+                <div id="localSteps" style="display:none">
+                  <ol style="margin-left:18px;line-height:1.8;color:var(--ink-2)">
+                    <li>在上方「捕获方式」选择 <b>本地代理抓包（9091）</b>。</li>
+                    <li>（可选）设置域名过滤：白名单只抓指定域名，黑名单排除指定域名。</li>
+                    <li>点击上方「● 开始实时捕获」，工具在 <b>127.0.0.1:9091</b> 启动本地代理。</li>
+                    <li>将浏览器 / App 的 HTTP 代理设置为 <b>127.0.0.1:9091</b>（HTTPS 需在系统/应用代理里也指向它）。</li>
+                    <li>正常操作，HTTP 请求（含 body）会实时进入「抓包会话」页；HTTPS 仅记录连接元数据。</li>
+                  </ol>
+                  <div class="hint" style="border-left-color:var(--warn)">本地代理为纯标准库实现，HTTPS 走 CONNECT 隧道<b>不解密 body</b>。如需 HTTPS 完整请求/响应体，仍建议使用 Fiddler 推送模式。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt12">
+            <div class="card-h">核心流程 <span class="sub">当前进度一目了然</span></div>
+            <div class="card-b">
+              <div class="flow" id="flowSteps">
+                <div class="step cur">① 开启代理</div><span class="arr">→</span>
+                <div class="step">② 网站操作</div><span class="arr">→</span>
+                <div class="step">③ 实时抓包</div><span class="arr">→</span>
+                <div class="step">④ 三方校验</div><span class="arr">→</span>
+                <div class="step">⑤ 异常分析</div><span class="arr">→</span>
+                <div class="step">⑥ 一键提单</div>
+              </div>
+              <div class="hint mt12 mb0">提示：左侧「抓包会话」选中一条 CRUD 请求，自动联动接口 + 数据库(多表) + 日志三方校验；命中异常可一键触发 AI 分析与 BUG 生成。右侧「实时监听」面板会随操作滚动刷新。</div>
+            </div>
+          </div>
+
+          <div class="grid g2 mt12">
+            <div class="card mb0">
+              <div class="card-h">连接状态</div>
+              <div class="card-b flush" id="connStatus">
+                <div class="kv"><div class="k">本地接收服务</div><div class="v" id="connProxy">127.0.0.1:9090 · 未启动</div></div>
+                <div class="kv"><div class="k">数据库（测试）</div><div class="v">未配置</div></div>
+                <div class="kv"><div class="k">日志源</div><div class="v">未配置</div></div>
+                <div class="kv"><div class="k">AI 模型</div><div class="v">未配置</div></div>
+              </div>
+            </div>
+            <div class="card mb0">
+              <div class="card-h">待处理异常 <span class="sub">点击进入综合校验</span></div>
+              <div class="card-b flush">
+                <table><tbody id="overviewAnomaly"><tr><td colspan="3" class="muted">暂无异常</td></tr></tbody></table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CAPTURE ===== -->
+        <section class="screen" id="screen-capture">
+          <div class="page-head">
+            <div><h1>抓包会话</h1><div class="sub">自动标注 CRUD 类型，点击进入三方校验</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 抓包会话</span>
+          </div>
+          <div class="hint" style="border-left-color:var(--warn);margin-bottom:14px">实时捕获支持两种方式：<b>① Fiddler 推送</b>（在概览页开启，Fiddler 把 session POST 到 127.0.0.1:9090）；<b>② 本地代理抓包</b>（在概览页选「本地代理抓包」，浏览器/App 代理指向 127.0.0.1:9091，支持域名过滤）。两种方式捕获的会话都进入同一会话池，后续校验流程一致。</div>
+          <div class="toolbar">
+            <button class="btn primary" onclick="toast('.saz 导入暂未实现')">⬆ 导入 .saz</button>
+            <button class="btn primary" id="capBtn" onclick="toggleProxyFromCap()">● 开始实时捕获</button>
+            <button class="btn" id="refreshCapBtn" onclick="refreshSessions()">🔄 刷新</button>
+            <button class="btn danger" onclick="clearSessions()">🗑 清空</button>
+            <div class="search"><span>🔍</span><input placeholder="搜索 URL / 参数 / 关键字…"></div>
+            <select class="inp"><option>全部方法</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+            <select class="inp"><option>全部类型</option><option>新增</option><option>修改</option><option>删除</option><option>查询</option></select>
+          </div>
+          <div class="card mb0">
+            <div class="card-h">会话列表 <span class="sub">实时刷新 · 自动标注</span></div>
+            <div class="card-b flush">
+              <table><thead><tr><th>#</th><th>方法</th><th>Host / Path</th><th>状态</th><th>类型</th><th>来源</th><th>校验</th><th></th></tr></thead>
+                <tbody id="capTable"><tr><td colspan="8" class="muted">暂无会话，请先开启实时捕获或导入 .saz</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== INSPECT ===== -->
+        <section class="screen" id="screen-inspect">
+          <div class="page-head">
+            <div><h1>综合校验</h1><div class="sub">接口 + 数据库(多表) + 日志，一屏比对</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 综合校验 · <span id="inspectCrumb">未选择会话</span></span>
+          </div>
+          <div class="hint mb0">粘贴一次接口抓包（请求体 + 响应体）到下方，或从抓包会话进入；工具将归一化为业务字段并做一致性比对。</div>
+
+          <div class="card mt12">
+            <div class="card-h">请求 <span class="sub" id="reqMethod">POST</span></div>
+            <div class="card-b">
+              <div class="field"><label>URL</label><input class="inp" id="inUrl" value="https://shop.test/api/order/create" /></div>
+              <div class="field"><label>request_body (JSON)</label><textarea class="inp" id="inReq" style="min-height:96px;font-family:var(--font-mono)">{"orderId":88231,"amount":99.00,"couponId":5}</textarea></div>
+              <div class="field"><label>response_body (JSON)</label><textarea class="inp" id="inResp" style="min-height:96px;font-family:var(--font-mono)">{"code":0,"data":{"orderId":88231,"payAmount":99.00,"status":"PAID"}}</textarea></div>
+              <div style="display:flex;gap:9px">
+                <div class="field" style="flex:1"><label>orderId（查表 join 值）</label><input class="inp" id="inOrder" placeholder="如 88231" value="88231" /></div>
+                <div class="field" style="flex:1"><label>traceId（拉日志）</label><input class="inp" id="inTrace" placeholder="如 abc-123" /></div>
+              </div>
+              <div style="display:flex;gap:9px;margin-top:8px">
+                <button class="btn primary" onclick="runInspect()">运行校验</button>
+                <button class="btn" onclick="loadDemo()">载入样例</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs mt12" style="margin-bottom:14px">
+            <div class="tab active" onclick="iTab(this,'i-matrix')">① 一致性矩阵</div>
+            <div class="tab" onclick="iTab(this,'i-api')">② 接口校验</div>
+            <div class="tab" onclick="iTab(this,'i-db')">③ 数据库校验</div>
+            <div class="tab" onclick="iTab(this,'i-log')">④ 日志校验</div>
+            <div style="flex:1"></div>
+            <button class="btn danger sm" onclick="go('ai')">🤖 触发 AI 分析</button>
+          </div>
+
+          <div class="tab-panel active" id="i-matrix">
+            <div class="card">
+              <div class="card-h">🔍 三方一致性矩阵 <span class="sub">接口入参 / 出参 / 数据库 / 日志 横向比较</span></div>
+              <div class="sub" style="font-size:11px;opacity:.65;margin:-2px 0 6px">※ 矩阵由工具规则比对生成（确定性数值/字符串比较，不依赖 AI）；AI 仅用于不一致时的根因分析。</div>
+              <div class="card-b flush">
+                <table><thead><tr><th>业务字段</th><th>接口入参</th><th>接口出参</th><th>数据库</th><th>服务器日志</th><th>结论</th></tr></thead>
+                  <tbody id="matrixBody"><tr><td colspan="6" class="muted">点击「运行校验」生成矩阵</td></tr></tbody>
+                </table>
+              </div>
+              <div class="card-b" style="border-top:1px dashed var(--line)" id="matrixSummary">
+                <span class="muted">等待运行校验</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="i-api">
+            <div class="card mt12">
+              <div class="card-h">🔁 接口校验 <span class="sub">请求 / 响应 并排 · 入参出参差异</span></div>
+              <div class="card-b">
+                <div class="split">
+                  <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                    <div style="padding:9px 12px;background:var(--surface-2);font-weight:600">请求 Request · 入参</div>
+                    <div class="kv"><div class="k">Method</div><div class="v" id="apiReqMethod">POST /api/order/create</div></div>
+                    <div class="kv"><div class="k">Body</div><div class="v" id="apiReqBody" style="white-space:pre-wrap">{ }</div></div>
+                  </div>
+                  <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+                    <div style="padding:9px 12px;background:var(--surface-2);font-weight:600">响应 Response · 出参</div>
+                    <div class="kv"><div class="k">Status</div><div class="v ok" id="apiRespStatus">200 OK</div></div>
+                    <div class="kv"><div class="k">Body</div><div class="v" id="apiRespBody" style="white-space:pre-wrap">{ }</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="i-db">
+            <div class="card mt12">
+              <div class="card-h">🗄️ 数据库校验 <span class="sub">多表联动 · 仅 SELECT</span></div>
+              <div class="card-b">
+                <div class="hint mb0">当前版本数据库校验为 UI 占位，真实 DB 连接请在「连接配置」中配置。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="i-log">
+            <div class="card mt12 mb0">
+              <div class="card-h">📜 日志校验 <span class="sub">按 traceId 关联 · 异常置顶</span></div>
+              <div class="card-b flush">
+                <div class="log-line lv-INFO">日志源未连接，请在「连接配置」中配置 ELK / 远程文件。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CONFIG ===== -->
+        <section class="screen" id="screen-config">
+          <div class="page-head">
+            <div><h1>连接配置</h1><div class="sub">录入数据库与日志源连接，保存后以只读方式连接</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">校验 / 连接配置</span>
+          </div>
+          <div class="hint mb0">在此录入<b>数据库连接</b>与<b>日志源</b>的连接信息。当前版本校验不依赖网络，AI 根因需配置 AI 模型。</div>
+
+          <div class="card mt12">
+            <div class="card-h">🤖 AI 模型 <span class="sub">用于异常根因分析与 BUG 生成</span></div>
+            <div class="card-b">
+              <div class="grid g3">
+                <div class="fitem"><label>base_url</label><input class="inp" id="cfgAiBase" value="https://api.openai.com/v1" /></div>
+                <div class="fitem"><label>model</label><input class="inp" id="cfgAiModel" value="gpt-4o-mini" /></div>
+                <div class="fitem"><label>api_key</label><input class="inp" id="cfgAiKey" type="password" placeholder="本地保存，绝不上传" /></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt12">
+            <div class="card-h">🗄️ 数据库连接 <span class="sub">指定业务库的连接信息（只读）</span></div>
+            <div class="card-b">
+              <div class="cfg-list" id="dbList"><div class="muted">暂无数据库连接</div></div>
+              <button class="btn sm mt12" onclick="editDb()">+ 新增 / 编辑数据库连接</button>
+              <div id="dbFormWrap" style="display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+                <input type="hidden" id="dbIdx" value="-1">
+                <div class="grid g3">
+                  <div class="fitem"><label>连接名</label><input class="inp" id="dbName" placeholder="order_db"></div>
+                  <div class="fitem"><label>环境</label><select class="inp" id="dbEnv"><option value="test">测试</option><option value="staging">预发</option><option value="prod">生产</option></select></div>
+                  <div class="fitem"><label>数据库类型</label><select class="inp" id="dbType"><option value="mysql">MySQL</option><option value="postgres">PostgreSQL</option><option value="hologres">Hologres</option><option value="sqlite">SQLite</option></select></div>
+                </div>
+                <div class="grid g3 mt12">
+                  <div class="fitem"><label>Host</label><input class="inp" id="dbHost" placeholder="10.20.3.11"></div>
+                  <div class="fitem"><label>Port</label><input class="inp" id="dbPort" type="number" placeholder="3306"></div>
+                  <div class="fitem"><label>Database</label><input class="inp" id="dbDatabase" placeholder="order_db"></div>
+                </div>
+                <div class="grid g3 mt12">
+                  <div class="fitem"><label>用户名</label><input class="inp" id="dbUser" placeholder="readonly_user"></div>
+                  <div class="fitem"><label>密码</label><input class="inp" id="dbPass" type="password" placeholder=""></div>
+                  <div class="fitem" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:3px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="dbReadonly" checked style="accent-color:var(--primary)"> <span style="font-size:12.5px">只读模式（禁止写）</span></label>
+                  </div>
+                </div>
+                <div class="mt12" style="display:flex;gap:9px">
+                  <button class="btn" onclick="testDbConnection()">🔌 测试连接</button>
+                  <button class="btn" onclick="readDbTables()">📋 读取库表</button>
+                  <button class="btn primary" onclick="saveDb()">保存连接</button>
+                  <button class="btn" onclick="cancelDb()">取消</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb0">
+            <div class="card-h">🗂️ 库表清单 <span class="sub">自动读取，用于规则推断（方案2：表级反查）</span></div>
+            <div class="card-b">
+              <div class="hint" style="border-left-color:var(--primary)">
+                点击数据库连接上的「📋 读取库表」会自动把该库所有业务表汇总到下方。综合校验时，
+                系统拿<strong>接口入参字段名</strong>去这些表里找<strong>同名列</strong>做比对，
+                无需为每个接口逐个维护关联表（新增接口也不增加维护量）。
+              </div>
+              <div class="cfg-list" id="tablePoolList"><div class="muted">尚未读取库表</div></div>
+            </div>
+          </div>
+
+          <div class="card mb0">
+            <div class="card-h">📜 日志源 <span class="sub">日志路径 / 服务器地址</span></div>
+            <div class="card-b">
+              <div class="cfg-list" id="logList"><div class="muted">暂无日志源</div></div>
+              <button class="btn sm mt12" onclick="editLog()">+ 新增 / 编辑日志源</button>
+              <div id="logFormWrap" style="display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+                <input type="hidden" id="logIdx" value="-1">
+                <div class="grid g3">
+                  <div class="fitem"><label>名称</label><input class="inp" id="logName" placeholder="elk-test"></div>
+                  <div class="fitem"><label>类型</label><select class="inp" id="logType"><option value="elk">ELK</option><option value="remote_file">远程文件</option><option value="container">容器日志</option></select></div>
+                  <div class="fitem"><label>索引 / 匹配模式</label><input class="inp" id="logIndex" placeholder="order-prod / *.log"></div>
+                </div>
+                <div class="field mt12">
+                  <label>日志路径 / 服务器地址</label>
+                  <input class="inp" id="logAddress" placeholder="http://elk.test:9200 或 /var/log/order-svc/*.log">
+                </div>
+                <div class="mt12" style="display:flex;gap:9px">
+                  <button class="btn" onclick="testLogSource()">🔌 测试连接</button>
+                  <button class="btn primary" onclick="saveLog()">保存日志源</button>
+                  <button class="btn" onclick="cancelLog()">取消</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb0">
+            <div class="card-h">🔗 校验规则 <span class="sub">接口操作 → 关联数据库表（决定自动查哪些表）</span></div>
+            <div class="card-b">
+              <div class="hint" style="border-left-color:var(--primary);margin-bottom:12px">
+                <b>规则作用：</b>综合校验时，工具按 <code>方法 + 路径</code> 匹配规则，自动用配置的每张表去数据库查最近一条记录，并把<strong>接口入参字段</strong>与<strong>库表同名列</strong>做比对，填入矩阵「数据库」列。表名支持 <code>db连接名.表名</code>，不写则使用第一个库。
+              </div>
+              <div class="cfg-list" id="ruleList"><div class="muted">暂无校验规则</div></div>
+              <div class="mt12" style="display:flex;gap:9px">
+                <button class="btn sm" onclick="editRule()">+ 新增 / 编辑规则</button>
+                <button class="btn sm" onclick="autoGenRules()">⚡ 从抓包生成规则</button>
+                <span class="sub" style="align-self:center">自动按库表推断，几十个接口一键生成</span>
+              </div>
+              <div id="ruleFormWrap" style="display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+                <input type="hidden" id="ruleIdx" value="-1">
+                <div class="fitem" style="margin-bottom:10px">
+                  <label>api_pattern</label>
+                  <input class="inp" id="ruleApi" placeholder="POST /api/supplier/create">
+                </div>
+                <div id="ruleTablesWrap">
+                  <!-- 动态表名列表 -->
+                </div>
+                <button class="btn sm" style="margin-top:8px" onclick="addRuleTable()">+ 添加关联表</button>
+                <div class="mt12" style="display:flex;gap:9px">
+                  <button class="btn primary" onclick="saveRule()">保存规则</button>
+                  <button class="btn" onclick="cancelRule()">取消</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-b" style="display:flex;gap:9px;margin-top:12px">
+            <button class="btn primary" onclick="saveConfig()">保存项目配置</button>
+            <button class="btn" onclick="testAllConnections()">测试全部连接</button>
+            <button class="btn danger" style="margin-left:auto" onclick="resetConfig()">清空本地配置</button>
+          </div>
+          <div class="hint" style="margin-top:8px">
+            配置保存在本机用户目录（<code>%USERPROFILE%\.captrace\</code>），重装软件不会丢失；打包分发给他人时不含任何配置。AI 密钥不落地存储，仅本次运行内存有效。
+          </div>
+        </section>
+
+        <!-- ===== AI ===== -->
+        <section class="screen" id="screen-ai">
+          <div class="page-head">
+            <div><h1>AI 分析与 BUG</h1><div class="sub">自动汇总上下文，调用模型根因分析并生成可提交 BUG</div></div>
+            <div class="spacer"></div>
+            <span class="crumb">智能 / AI 分析与 BUG</span>
+          </div>
+          <div class="hint mb0">在「综合校验」中运行校验并产生不一致后，可在此调用 AI 分析根因并生成 BUG 单。</div>
+          <div class="ai-box mt12 mb0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <b>🤖 AI 根因分析</b>
+              <button class="btn primary sm" id="aiBtn" onclick="runAI()">▶ 调用 AI 分析</button>
+            </div>
+            <div id="aiResult" style="display:none"></div>
+            <div id="aiLoading" style="display:none" class="muted">⏳ 模型分析中…</div>
+          </div>
+
+          <div class="bug mt12" id="bugCard" style="display:none">
+            <div class="bug-h">🐞 可提交 BUG 单 <span class="muted" style="font-weight:400;color:var(--danger)">（一键复制）</span></div>
+            <div class="bug-b" id="bugBody"></div>
+            <div class="card-b" style="border-top:1px solid var(--line);display:flex;gap:10px">
+              <button class="btn primary" onclick="copyBug()">📋 一键复制（Markdown）</button>
+              <button class="btn" onclick="toast('已复制为 TAPD 格式')">复制为 TAPD</button>
+              <button class="btn" onclick="toast('已复制为 Jira 格式')">复制为 Jira</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Inspector (right) -->
+    <aside class="inspector" id="inspector">
+      <div class="divider" id="divider"></div>
+      <div class="insp-head">
+        <span class="live" id="liveDot"></span><b>实时监听</b>
+        <span class="spacer" style="flex:1"></span>
+        <span class="pill ok" style="padding:3px 9px" id="livePill"><span class="dot"></span>standby</span>
+      </div>
+      <div class="insp-body">
+        <div class="mini">
+          <div class="lab">当前会话</div>
+          <div class="val" id="inspSession">未选择</div>
+        </div>
+        <div class="mini">
+          <div class="lab">关键字段</div>
+          <div class="val" id="inspKey">—</div>
+        </div>
+        <div class="mini">
+          <div class="lab">三方状态</div>
+          <div class="val"><span id="inspApi">○ 接口</span> · <span id="inspDb">○ 数据库</span> · <span id="inspLog">○ 日志</span></div>
+        </div>
+        <div style="font-weight:600;font-size:12px;margin:4px 0 8px">捕获流</div>
+        <div class="feed" id="feed"><div class="muted">等待实时捕获…</div></div>
+      </div>
+      <div class="insp-foot">
+        <button class="btn sm" style="flex:1" onclick="go('inspect')">打开校验</button>
+        <button class="btn primary sm" style="flex:1" onclick="go('ai')">🤖 分析</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== STATUS BAR ===================== -->
+  <div class="statusbar">
+    <div class="seg d-warn" id="sbProxy"><span class="d"></span>代理 未启动</div>
+    <div class="seg d-warn" id="sbDb"><span class="d"></span>DB 未连接</div>
+    <div class="seg d-warn" id="sbLog"><span class="d"></span>日志 未连接</div>
+    <div class="seg d-warn" id="sbAi"><span class="d"></span>AI 未配置</div>
+    <div class="spacer"></div>
+    <div class="seg" id="sbCap">捕获 0</div>
+    <div class="seg" id="sbAnomaly">异常 0</div>
+    <div class="seg r">UTF-8 · 只读</div>
+  </div>
+</div>
+
+<!-- Command palette -->
+<div class="cm-overlay" id="cmOverlay" onclick="if(event.target===this)closeCM()">
+  <div class="cm">
+    <div class="cm-input"><span>🔎</span><input id="cmInput" placeholder="输入命令或搜索…" autofocus></div>
+    <div class="cm-list" id="cmList">
+      <div class="g">导航</div>
+      <div class="cm-item" data-go="overview"><span class="ico">📊</span>前往 概览</div>
+      <div class="cm-item" data-go="capture"><span class="ico">📡</span>前往 抓包会话</div>
+      <div class="cm-item" data-go="inspect"><span class="ico">🧩</span>前往 综合校验</div>
+      <div class="cm-item" data-go="config"><span class="ico">⚙️</span>前往 连接配置</div>
+      <div class="cm-item" data-go="ai"><span class="ico">🤖</span>前往 AI 分析与 BUG</div>
+      <div class="g">操作</div>
+      <div class="cm-item" onclick="toggleProxy();closeCM()"><span class="ico">🟢</span>启停本地抓包代理<span class="k">P</span></div>
+      <div class="cm-item" onclick="toggleTheme();closeCM()"><span class="ico">🌓</span>切换深浅主题<span class="k">T</span></div>
+      <div class="cm-item" onclick="toggleInspector();closeCM()"><span class="ico">🧭</span>显隐信息面板<span class="k">I</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div class="ctx" id="ctx">
+  <div class="ctx-item" onclick="go('inspect');hideCtx()">🔍 打开综合校验</div>
+  <div class="ctx-item" onclick="go('ai');hideCtx()">🤖 触发 AI 分析</div>
+  <div class="ctx-item" onclick="toast('已复制请求报文');hideCtx()">📋 复制请求报文</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="toast('已标记为例外忽略');hideCtx()">🚫 标记为例外忽略</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== pywebview bridge ===== */
+let api = null;
+let wvWin = null;
+const ready = new Promise(res => window.addEventListener('pywebviewready', res));
+ready.then(async () => {
+  api = window.pywebview.api;
+  wvWin = window.pywebview.window;
+  const v = await api.version();
+  document.getElementById('navVer').textContent = 'v' + v + ' · 桌面端';
+  document.getElementById('brandSub').textContent = 'captrace ' + v;
+  try { await refreshProjects(); } catch(e){}
+  try { await loadProject('默认项目'); } catch(e){}
+  updateFlow();
+});
+
+/* ===== state ===== */
+const state = {
+  env: '测试环境',
+  sessions: [],
+  anomalies: [],
+  bugs: 0,
+  matrix: null,
+  session: null,
+  bug: null,
+  projectName: '默认项目',
+  db_connections: [],
+  log_sources: [],
+  ai:{base_url:'https://api.openai.com/v1', model:'gpt-4o-mini', api_key:''}
+};
+
+const titles={overview:'概览',capture:'抓包会话',inspect:'综合校验',config:'连接配置',ai:'AI分析与BUG'};
+function go(screen){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelector('.workspace').scrollTop=0;
+  if(screen==='capture'){ refreshSessions(); }
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>go(n.dataset.screen)));
+
+function iTab(el,id){
+        document.querySelectorAll('#screen-inspect .tabs .tab').forEach(t=>t.classList.remove('active'));
+        el.classList.add('active');
+        document.querySelectorAll('#screen-inspect .tab-panel').forEach(p=>p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        // tab 行已 sticky，不主动滚动页面，避免被置顶
+      }
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+/* ===== theme / inspector / env / window ===== */
+function toggleTheme(){
+  const h=document.documentElement;
+  h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark');
+  toast('主题：'+(h.getAttribute('data-theme')==='dark'?'深色':'浅色'));
+}
+function toggleInspector(){ document.getElementById('body').classList.toggle('no-inspector'); }
+const envs=['测试环境','预发环境','生产环境'];
+function cycleEnv(){
+  const i = envs.indexOf(state.env);
+  state.env = envs[(i+1)%envs.length];
+  document.getElementById('envLabel').textContent = state.env;
+  toast('切换环境：' + state.env);
+}
+let winMaximized = false;
+async function winMin(){ await api.window_minimize(); }
+async function winMax(){
+  const res = await api.window_maximize();
+  winMaximized = !!(res && res.maximized);
+  const btn = document.getElementById('winMaxBtn');
+  if(btn){ btn.textContent = winMaximized ? '🗗' : '▢'; btn.title = winMaximized ? '还原' : '最大化'; }
+}
+async function winClose(){ await api.window_close(); }
+
+function copyFiddlerScript(){
+  const el = document.getElementById('fiddlerScript');
+  if(!el){ toast('脚本元素不存在'); return; }
+  function fallbackCopy(){
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    try { document.execCommand('copy'); toast('Fiddler 脚本已复制'); } catch(e){ toast('复制失败，请手动选中复制'); }
+    sel.removeAllRanges();
+  }
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(el.innerText).then(()=>toast('Fiddler 脚本已复制')).catch(fallbackCopy);
+  } else { fallbackCopy(); }
+}
+
+function toggleCapSteps(){
+  const el = document.getElementById('capSteps');
+  const btn = document.getElementById('capStepsToggle');
+  if(!el || !btn) return;
+  if(el.style.display === 'none'){
+    el.style.display = 'flex';
+    btn.textContent = '▾ 收起';
+  } else {
+    el.style.display = 'none';
+    btn.textContent = '▸ 展开配置步骤';
+  }
+}
+
+/* ===== proxy / capture ===== */
+async function toggleProxy(){
+  const led=document.getElementById('proxyLed');const txt=document.getElementById('proxyTxt');
+  const livePill = document.getElementById('livePill'); const liveDot = document.getElementById('liveDot');
+  const sbProxy = document.getElementById('sbProxy'); const capBtn = document.getElementById('capBtn');
+  const mode = document.getElementById('capMode').value;
+  if (led.classList.contains('off')) {
+    let r;
+    if(mode==='local'){
+      const fmode=document.getElementById('domainFilterMode').value;
+      const doms=document.getElementById('domainFilterList').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const up=document.getElementById('upstreamProxy').value.trim();
+      const port=parseInt(document.getElementById('proxyPort').value.trim(),10)||9091;
+      r = await api.proxy_start(port, fmode, doms, up);
+    } else {
+      r = await api.serve_start(9090);
+    }
+    if (r.ok) {
+      led.classList.remove('off'); txt.textContent='代理运行中';
+      livePill.className='pill ok'; livePill.innerHTML='<span class="dot"></span>live';
+      liveDot.style.animation='pulse 2s infinite'; liveDot.style.background='var(--ok)';
+      sbProxy.className='seg d-ok'; sbProxy.innerHTML='<span class="d"></span>代理 运行中';
+      if(mode==='local'){
+        const up=document.getElementById('upstreamProxy').value.trim();
+        const port=parseInt(document.getElementById('proxyPort').value.trim(),10)||9091;
+        const upTxt = up ? ` · 上游：${up}` : '';
+        document.getElementById('connProxy').innerHTML=`<span class="ok">本地代理 127.0.0.1:${port} · 运行中${upTxt}</span>`;
+        toast('本地代理已启动（'+port+'）' + (document.getElementById('domainFilterMode').value!=='off' ? ' · 已启用域名过滤' : '') + (up?' · 经上游代理':' · 直连'));
+      } else {
+        document.getElementById('connProxy').innerHTML='<span class="ok">127.0.0.1:9090 · 运行中</span>';
+        toast('本地接收服务已启动');
+      }
+      const ovCap = document.getElementById('overviewCapBtn');
+      if(capBtn){ capBtn.innerHTML='● 停止实时捕获'; capBtn.classList.remove('primary'); }
+      if(ovCap){ ovCap.innerHTML='● 停止实时捕获'; ovCap.classList.remove('primary'); }
+      startSessionPoll();
+      updateFlow();
+    } else { toast('启动失败：'+r.error); }
+  } else {
+    let r;
+    if(mode==='local'){ r = await api.proxy_stop(); }
+    else { r = await api.serve_stop(); }
+    stopSessionPoll();
+    led.classList.add('off'); txt.textContent='代理未启动';
+    livePill.className='pill'; livePill.innerHTML='<span class="dot"></span>standby';
+    liveDot.style.animation='none'; liveDot.style.background='var(--muted)';
+    sbProxy.className='seg d-warn'; sbProxy.innerHTML='<span class="d"></span>代理 未启动';
+    if(mode==='local'){ const port=parseInt(document.getElementById('proxyPort').value.trim(),10)||9091; document.getElementById('connProxy').textContent='本地代理 127.0.0.1:'+port+' · 未启动'; toast('本地代理已停止'); }
+    else { document.getElementById('connProxy').textContent='127.0.0.1:9090 · 未启动'; toast('本地接收服务已停止'); }
+    const ovCap = document.getElementById('overviewCapBtn');
+    if(capBtn){ capBtn.innerHTML='● 开始实时捕获'; capBtn.classList.add('primary'); }
+    if(ovCap){ ovCap.innerHTML='● 开始实时捕获'; ovCap.classList.add('primary'); }
+    updateFlow();
+  }
+}
+function toggleProxyFromCap(){ toggleProxy(); }
+function onCapModeChange(){
+  const mode=document.getElementById('capMode').value;
+  const localCfg=document.getElementById('localProxyCfg');
+  const fiddlerSteps=document.getElementById('fiddlerSteps');
+  const localSteps=document.getElementById('localSteps');
+  const workHint=document.getElementById('capWorkHint');
+  const modeDesc=document.getElementById('capModeDesc');
+  if(mode==='local'){
+    localCfg.style.display='block';
+    if(fiddlerSteps) fiddlerSteps.style.display='none';
+    if(localSteps) localSteps.style.display='block';
+    workHint.innerHTML='<b>工作原理：</b>工具在 <b>127.0.0.1:9091</b> 启动本地正向代理，浏览器 / App 把代理指向它即可抓包。捕获的会话直接进入同一会话池，后续的<b>规则匹配 → 查库 → 拉日志 → 一致性矩阵</b>流程与 Fiddler 模式完全一致。';
+    modeDesc.textContent='本地代理抓包模式：工具自己起代理（9091），无需 Fiddler';
+  } else {
+    localCfg.style.display='none';
+    if(fiddlerSteps) fiddlerSteps.style.display='block';
+    if(localSteps) localSteps.style.display='none';
+    workHint.innerHTML='<b>工作原理：</b>本工具不直接抓包，而是接收 Fiddler 抓到的请求。浏览器 / App 仍然走 Fiddler 代理（默认 127.0.0.1:8888），由 Fiddler 通过 CustomRules 实时把每个完成的 session POST 到本工具。';
+    modeDesc.textContent='Fiddler 推送模式：工具启动接收服务，Fiddler 负责抓包';
+  }
+}
+
+let _sessionPoll = null;
+async function refreshSessions(){
+  try {
+    const arr = await api.get_sessions();
+    const existing = new Map(state.sessions.map(s=>[s.id,s]));
+    let changed = false;
+    arr.forEach(s=>{ if(!existing.has(s.id)){ state.sessions.push(s); changed = true; } });
+    if(changed){ renderSessionList(); updateStats(); }
+  } catch(e) { console.error('refreshSessions', e); }
+}
+function renderSessionList(){
+  const tb = document.getElementById('capTable');
+  if(!state.sessions.length){ tb.innerHTML = '<tr><td colspan="8" class="muted">暂无会话，请先开启实时捕获或导入 .saz</td></tr>'; return; }
+  tb.innerHTML = state.sessions.map((s,i)=>{
+    const url = s.url || '';
+    const host = s.host || url.split('/')[2] || '—';
+    const path = url.replace(/^https?:\/\/[^/]+/, '') || '/';
+    const method = (s.method||'GET').toUpperCase();
+    let crud = '查询';
+    if(method==='POST'||method==='PUT') crud = '新增/修改';
+    if(method==='DELETE') crud = '删除';
+    const status = s.status_code || '—';
+    const source = s.source==='fiddler_push' ? 'Fiddler' : (s.source==='builtin_proxy'?'本地代理':'—');
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="tag">${esc(method)}</span></td>
+      <td><div style="font-weight:500">${esc(host)}</div><div class="sub">${esc(path)}</div></td>
+      <td>${esc(status)}</td>
+      <td>${esc(crud)}</td>
+      <td>${esc(source)}</td>
+      <td><button class="btn xs" onclick="inspectSession(${i})">校验</button></td>
+      <td></td>
+    </tr>`;
+  }).join('');
+}
+function inspectSession(idx){
+  const s = state.sessions[idx];
+  if(!s) return;
+  document.getElementById('inUrl').value = s.url || '';
+  document.getElementById('inReq').value = s.request_body || '';
+  document.getElementById('inResp').value = s.response_body || '';
+  go('inspect');
+}
+function startSessionPoll(){
+  if(_sessionPoll) return;
+  refreshSessions();
+  _sessionPoll = setInterval(refreshSessions, 1500);
+}
+function stopSessionPoll(){
+  if(_sessionPoll){ clearInterval(_sessionPoll); _sessionPoll = null; }
+}
+async function clearSessions(){
+  if(!state.sessions.length){ toast('已经是空的'); return; }
+  if(!confirm('确认清空所有抓包会话？')) return;
+  await api.clear_sessions();
+  state.sessions = [];
+  renderSessionList(); updateStats();
+  toast('已清空');
+}
+
+/* ===== overview ===== */
+function updateStats(){
+  document.getElementById('statCap').innerHTML = state.sessions.length + '<small> 条</small>';
+  document.getElementById('statCrud').innerHTML = state.sessions.length + '<small> 条</small>';
+  document.getElementById('statAnomaly').innerHTML = state.anomalies.length + '<small> 项</small>';
+  document.getElementById('statBug').innerHTML = state.bugs + '<small> 张</small>';
+  document.getElementById('navCap').textContent = state.sessions.length;
+  document.getElementById('navInspect').textContent = state.anomalies.length;
+  document.getElementById('navAi').textContent = state.bugs;
+  document.getElementById('sbCap').textContent = '捕获 ' + state.sessions.length;
+  document.getElementById('sbAnomaly').textContent = '异常 ' + state.anomalies.length;
+}
+function updateFlow(){
+  const steps = document.querySelectorAll('#flowSteps .step');
+  const proxyOn = !document.getElementById('proxyLed').classList.contains('off');
+  const hasSession = state.sessions.length > 0;
+  const hasAnomaly = state.anomalies.length > 0;
+  const hasBug = state.bugs > 0;
+  const set = (idx, cls) => { steps[idx].className = 'step ' + cls; };
+  set(0, proxyOn?'cur':'');
+  set(1, proxyOn?'cur':'');
+  set(2, hasSession?'cur':'');
+  set(3, state.matrix?'cur':'');
+  set(4, hasAnomaly?'cur err':'err');
+  set(5, hasBug?'cur ok':'ok');
+  if(hasAnomaly){ steps[4].style.borderColor='var(--danger)'; steps[4].style.color='var(--danger)'; steps[4].style.background='var(--danger-soft)'; }
+  if(hasBug){ steps[5].style.borderColor='var(--ok)'; steps[5].style.color='var(--ok)'; steps[5].style.background='var(--ok-soft)'; }
+}
+
+/* ===== inspect ===== */
+async function loadDemo(){
+  const d = await api.demo();
+  document.getElementById('inUrl').value = d.session.url || 'https://shop.test/api/order/create';
+  document.getElementById('inReq').value = d.session.request_body || '';
+  document.getElementById('inResp').value = d.session.response_body || '';
+  await applyInspectResult(d.session, d.matrix, d.has_anomaly);
+  toast('样例已载入');
+}
+async function runInspect(){
+  const payload = {
+    method: document.getElementById('reqMethod').textContent,
+    url: document.getElementById('inUrl').value,
+    request_body: document.getElementById('inReq').value,
+    response_body: document.getElementById('inResp').value,
+    trace_id: document.getElementById('inTrace') ? document.getElementById('inTrace').value : '',
+    order_id: document.getElementById('inOrder') ? document.getElementById('inOrder').value : '',
+    rules: state.rules || [],
+    db_connections: state.db_connections || [],
+    log_sources: state.log_sources || [],
+    table_pool: Array.from(_tablePool),
+  };
+  toast('运行校验中…');
+  const r = await api.run_check(payload);
+  await applyInspectResult(payload, r.matrix, r.has_anomaly);
+  toast(r.summary);
+}
+async function applyInspectResult(sess, matrix, hasAnomaly){
+  state.session = sess; state.matrix = matrix;
+  const key = extractOrderId(sess) || '—';
+  document.getElementById('inspectCrumb').textContent = (sess.method||'POST') + ' ' + (sess.url||'');
+  document.getElementById('apiReqMethod').textContent = (sess.method||'POST') + ' ' + (sess.url||'');
+  document.getElementById('apiReqBody').textContent = fmtJson(sess.request_body);
+  document.getElementById('apiRespBody').textContent = fmtJson(sess.response_body);
+  document.getElementById('apiRespStatus').textContent = (sess.status_code||'200') + ' OK';
+  document.getElementById('inspSession').textContent = (sess.method||'POST') + ' ' + (sess.url||'');
+  document.getElementById('inspKey').textContent = 'orderId = ' + key;
+
+  const tb = document.getElementById('matrixBody');
+  tb.innerHTML = matrix.map(m => {
+    const cls = m.conclusion==='consistent' ? 'row-ok' : (m.conclusion==='inconsistent'?'row-bad':'');
+    const conclusion = m.conclusion==='consistent' ? '<span class="ok">✓ 一致</span>' : '<span class="bad">✗ 不一致</span>';
+    const vals = m.values || {};
+    return `<tr class="${cls}"><td><b>${m.name}</b></td><td>${fmtVal(vals.request)}</td><td>${fmtVal(vals.response)}</td><td>${fmtVal(vals.db)}</td><td>${fmtVal(vals.log)}</td><td>${conclusion}</td></tr>`;
+  }).join('');
+  const ok = matrix.filter(m=>m.conclusion==='consistent').length;
+  const bad = matrix.length - ok;
+  document.getElementById('matrixSummary').innerHTML = `<span class="${bad?'bad':'ok'}">${bad?'✗ '+bad+' 项不一致':'✓ 全部一致'}</span> <span class="ok" style="margin-left:10px">✓ ${ok} 项一致</span> <span class="muted" style="margin-left:10px">任意不一致或日志 ERROR 自动触发 AI 分析</span>`;
+  document.getElementById('inspApi').innerHTML = hasAnomaly?'<span class="bad">✗ 接口</span>':'<span class="ok">✓ 接口</span>';
+  document.getElementById('inspDb').innerHTML = hasAnomaly?'<span class="bad">✗ 数据库</span>':'<span class="ok">✓ 数据库</span>';
+  document.getElementById('inspLog').innerHTML = hasAnomaly?'<span class="bad">✗ 日志</span>':'<span class="ok">✓ 日志</span>';
+  if(hasAnomaly && !state.anomalies.find(a=>a.key===key)){
+    const reason = matrix.filter(m=>m.conclusion!=='consistent').map(m=>m.name).join(',');
+    state.anomalies.push({method:sess.method||'POST', url:sess.url||'', key:key, reason:reason||'不一致'});
+  }
+  updateStats(); updateOverviewAnomaly(); updateFlow();
+}
+function updateOverviewAnomaly(){
+  const el = document.getElementById('overviewAnomaly');
+  if(!state.anomalies.length){ el.innerHTML='<tr><td colspan="3" class="muted">暂无异常</td></tr>'; return; }
+  el.innerHTML = state.anomalies.slice(-3).map(a =>
+    `<tr onclick="go('inspect')"><td><span class="meth m-${(a.method||'POST').toLowerCase()}">${a.method||'POST'}</span></td><td>${pathOf(a.url)}</td><td><span class="bad">${a.reason}</span></td></tr>`
+  ).join('');
+}
+function fmtJson(s){ try{ return JSON.stringify(JSON.parse(s||'{}'), null, 2); }catch(e){ return s||''; } }
+function fmtVal(v){ if(v===undefined||v===null||v==='') return '—'; return String(v); }
+function extractOrderId(s){ try{ const b=JSON.parse(s.request_body||'{}'); if(b.orderId)return b.orderId; const r=JSON.parse(s.response_body||'{}'); const d=r.data||r; return d.orderId||d.order_id; }catch(e){ return null; } }
+function pathOf(url){ try{ return new URL(url).pathname; }catch(e){ return url||''; } }
+
+/* ===== AI ===== */
+async function runAI(){
+  if(!state.matrix){ toast('请先在「综合校验」运行校验'); return; }
+  if(!state.ai.api_key){ toast('请在「连接配置」填写 AI api_key'); return; }
+  document.getElementById('aiBtn').style.display='none';
+  document.getElementById('aiLoading').style.display='block';
+  document.getElementById('aiResult').style.display='none';
+  document.getElementById('bugCard').style.display='none';
+  try {
+    const r = await api.ai_analyze({ session: state.session, matrix: state.matrix, ai: state.ai });
+    document.getElementById('aiLoading').style.display='none';
+    if(!r.ok){ document.getElementById('aiResult').style.display='block'; document.getElementById('aiResult').innerHTML='<div class="bad">AI 调用失败：'+r.error+'</div>'; document.getElementById('aiBtn').style.display='inline-flex'; return; }
+    const b = r.bug; state.bug = b; state.bugs++;
+    const steps = [
+      '<b>可能根因（高置信度）</b>：' + (b.root_cause || '未返回'),
+      '<b>复现步骤</b>：' + (b.steps || '—'),
+      '<b>期望结果</b>：' + (b.expected || '—'),
+      '<b>实际结果</b>：' + (b.actual || '—')
+    ];
+    document.getElementById('aiResult').innerHTML = steps.map((s,i)=>`<div class="ai-step"><div class="n">${i+1}</div><div>${s}</div></div>`).join('');
+    document.getElementById('aiResult').style.display='block';
+    renderBug(b);
+    updateStats(); updateFlow();
+  } catch(e) {
+    document.getElementById('aiLoading').style.display='none';
+    document.getElementById('aiBtn').style.display='inline-flex';
+    toast('AI 错误：' + e);
+  }
+}
+function renderBug(b){
+  document.getElementById('bugCard').style.display='block';
+  const sevCls = b.severity==='高'?'sev-high':(b.severity==='中'?'sev-mid':'sev-low');
+  document.getElementById('bugBody').innerHTML = `
+    <div class="bug-row"><div class="lab">标题</div><div class="val"><b>${b.title}</b></div></div>
+    <div class="grid g3" style="margin-bottom:11px">
+      <div class="bug-row mb0"><div class="lab">环境</div><div class="val">${state.env}</div></div>
+      <div class="bug-row mb0"><div class="lab">模块</div><div class="val">${b.module || '订单服务'}</div></div>
+      <div class="bug-row mb0"><div class="lab">严重程度</div><div class="val"><span class="severity ${sevCls}">${b.severity}</span></div></div>
+    </div>
+    <div class="bug-row"><div class="lab">复现步骤</div><div class="val">${b.steps}</div></div>
+    <div class="bug-row"><div class="lab">期望结果</div><div class="val">${b.expected}</div></div>
+    <div class="bug-row"><div class="lab">实际结果</div><div class="val bad">${b.actual}</div></div>
+    <div class="bug-row"><div class="lab">证据</div><div class="val" style="font-family:var(--font-mono);font-size:12px">${b.evidence || ''}</div></div>
+    <div class="bug-row mb0"><div class="lab">AI 根因</div><div class="val">${b.root_cause}</div></div>
+  `;
+}
+function copyBug(){
+  if(!state.bug){ toast('请先生成 BUG 单'); return; }
+  const b = state.bug;
+  const md = `# ${b.title}
+- 环境：${state.env}
+- 模块：${b.module || '订单服务'}
+- 严重程度：${b.severity}
+- 复现步骤：${b.steps}
+- 期望结果：${b.expected}
+- 实际结果：${b.actual}
+- 证据：${b.evidence || ''}
+- AI 根因：${b.root_cause}`;
+  if(navigator.clipboard){ navigator.clipboard.writeText(md).then(()=>toast('BUG 单已复制')).catch(()=>fallbackCopy(md)); }
+  else { fallbackCopy(md); }
+}
+function fallbackCopy(t){ const a=document.createElement('textarea'); a.value=t; document.body.appendChild(a); a.select(); document.execCommand('copy'); document.body.removeChild(a); toast('BUG 单已复制'); }
+
+/* ===== projects / config ===== */
+async function refreshProjects(){
+  const list = await api.list_projects();
+  if(list.length && !state.projectName){ state.projectName = list[0]; }
+}
+async function loadProject(name){
+  const p = await api.load_project(name);
+  if(p){
+    state.projectName = p.name;
+    state.db_connections = p.db_connections || [];
+    state.log_sources = p.log_sources || [];
+    state.rules = p.rules || [];
+    _tablePool = new Set(p.table_pool || []);
+    if(p.ai){
+      state.ai = p.ai;
+      document.getElementById('cfgAiBase').value = p.ai.base_url || '';
+      document.getElementById('cfgAiModel').value = p.ai.model || '';
+      document.getElementById('cfgAiKey').value = p.ai.api_key || '';
+      updateAiStatus();
+    }
+    renderDbList();
+    renderLogList();
+    renderRuleList();
+    renderTablePool();
+  }
+}
+async function saveConfig(){
+  state.ai = { base_url: document.getElementById('cfgAiBase').value, model: document.getElementById('cfgAiModel').value, api_key: document.getElementById('cfgAiKey').value };
+  // 保存时把密钥置空（后端同样会清空），避免明文落盘；运行时的密钥仍保留在内存中
+  const saveAi = { ...state.ai, api_key: '' };
+  const cfg = { name: state.projectName, env: state.env.replace('环境',''), db_connections: state.db_connections, log_sources: state.log_sources, rules: state.rules || [], ai: saveAi, table_pool: Array.from(_tablePool) };
+  await api.save_project(cfg);
+  updateAiStatus();
+  toast('项目配置已保存（AI 密钥不落盘）');
+}
+async function resetConfig(){
+  if(!confirm('确认清空本机所有项目配置？此操作不可恢复，重装软件也不会自动恢复。')) return;
+  const r = await api.reset_config();
+  if(r.ok){
+    state.db_connections = []; state.log_sources = []; state.rules = [];
+    _tablePool = new Set();
+    state.ai = { base_url:'', model:'', api_key:'' };
+    document.getElementById('cfgAiBase').value='';
+    document.getElementById('cfgAiModel').value='';
+    document.getElementById('cfgAiKey').value='';
+    renderDbList(); renderLogList(); renderRuleList(); renderTablePool();
+    toast('本地配置已清空，可安全打包分发给他人');
+  } else {
+    toast('清空失败：'+ (r.error||''));
+  }
+}
+
+/* ===== 数据库连接 ===== */
+function renderDbList(){
+  const wrap = document.getElementById('dbList');
+  if(!state.db_connections.length){ wrap.innerHTML = '<div class="muted">暂无数据库连接</div>'; updateConnStatus(); return; }
+  wrap.innerHTML = state.db_connections.map((d,i)=>`
+    <div class="cfg-row">
+      <div class="cfg-row-main">
+        <div class="cfg-row-title">${esc(d.name)} <span class="tag">${esc(d.db_type)}</span> ${d.read_only ? '<span class="tag soft">只读</span>' : ''}</div>
+        <div class="cfg-row-sub">${esc(d.host)}:${esc(d.port)} / ${esc(d.database)} · ${esc(d.user)}</div>
+      </div>
+      <div class="cfg-row-actions">
+        <button class="btn xs" onclick="editDb(${i})">编辑</button>
+        <button class="btn xs danger" onclick="delDb(${i})">删除</button>
+      </div>
+    </div>`).join('');
+  updateConnStatus();
+}
+function editDb(i){
+  const f = document.getElementById('dbFormWrap');
+  f.style.display = 'block';
+  if(i===undefined || i<0){ document.getElementById('dbIdx').value='-1'; ['dbName','dbHost','dbPort','dbDatabase','dbUser','dbPass'].forEach(id=>document.getElementById(id).value=''); document.getElementById('dbEnv').value='test'; document.getElementById('dbType').value='mysql'; document.getElementById('dbReadonly').checked=true; }
+  else { const d=state.db_connections[i]; document.getElementById('dbIdx').value=i; document.getElementById('dbName').value=d.name||''; document.getElementById('dbEnv').value=d.env||'test'; document.getElementById('dbType').value=d.db_type||'mysql'; document.getElementById('dbHost').value=d.host||''; document.getElementById('dbPort').value=d.port||''; document.getElementById('dbDatabase').value=d.database||''; document.getElementById('dbUser').value=d.user||''; document.getElementById('dbPass').value=d.password||''; document.getElementById('dbReadonly').checked=!!d.read_only; }
+}
+function cancelDb(){ document.getElementById('dbFormWrap').style.display='none'; }
+function saveDb(){
+  const i = parseInt(document.getElementById('dbIdx').value,10);
+  const rec = { name:document.getElementById('dbName').value.trim(), env:document.getElementById('dbEnv').value, db_type:document.getElementById('dbType').value, host:document.getElementById('dbHost').value.trim(), port:document.getElementById('dbPort').value?parseInt(document.getElementById('dbPort').value,10):null, database:document.getElementById('dbDatabase').value.trim(), user:document.getElementById('dbUser').value.trim(), password:document.getElementById('dbPass').value, read_only:document.getElementById('dbReadonly').checked };
+  if(!rec.name){ toast('请填写连接名'); return; }
+  if(i<0) state.db_connections.push(rec); else state.db_connections[i]=rec;
+  renderDbList(); cancelDb(); toast('数据库连接已保存（点「保存项目配置」持久化）');
+}
+function delDb(i){ state.db_connections.splice(i,1); renderDbList(); toast('已删除'); }
+async function testDbConnection(){
+  const rec = { name:document.getElementById('dbName').value.trim(), db_type:document.getElementById('dbType').value, host:document.getElementById('dbHost').value.trim(), port:document.getElementById('dbPort').value?parseInt(document.getElementById('dbPort').value,10):null, database:document.getElementById('dbDatabase').value.trim(), user:document.getElementById('dbUser').value.trim(), password:document.getElementById('dbPass').value };
+  const r = await api.test_db_connection(rec);
+  if(r.ok) toast(r.message || '连接成功'); else toast('连接失败：'+r.error);
+}
+
+/* ===== 日志源 ===== */
+function renderLogList(){
+  const wrap = document.getElementById('logList');
+  if(!state.log_sources.length){ wrap.innerHTML = '<div class="muted">暂无日志源</div>'; updateConnStatus(); return; }
+  wrap.innerHTML = state.log_sources.map((d,i)=>`
+    <div class="cfg-row">
+      <div class="cfg-row-main">
+        <div class="cfg-row-title">${esc(d.name)} <span class="tag">${esc(d.log_type)}</span> ${d.read_only ? '<span class="tag soft">只读</span>' : ''}</div>
+        <div class="cfg-row-sub">${esc(d.address)} ${d.index ? '· 索引：'+esc(d.index) : ''}</div>
+      </div>
+      <div class="cfg-row-actions">
+        <button class="btn xs" onclick="editLog(${i})">编辑</button>
+        <button class="btn xs danger" onclick="delLog(${i})">删除</button>
+      </div>
+    </div>`).join('');
+  updateConnStatus();
+}
+function editLog(i){
+  const f = document.getElementById('logFormWrap');
+  f.style.display = 'block';
+  if(i===undefined || i<0){ document.getElementById('logIdx').value='-1'; ['logName','logIndex','logAddress'].forEach(id=>document.getElementById(id).value=''); document.getElementById('logType').value='elk'; }
+  else { const d=state.log_sources[i]; document.getElementById('logIdx').value=i; document.getElementById('logName').value=d.name||''; document.getElementById('logType').value=d.log_type||'elk'; document.getElementById('logIndex').value=d.index||''; document.getElementById('logAddress').value=d.address||''; }
+}
+function cancelLog(){ document.getElementById('logFormWrap').style.display='none'; }
+function saveLog(){
+  const i = parseInt(document.getElementById('logIdx').value,10);
+  const rec = { name:document.getElementById('logName').value.trim(), log_type:document.getElementById('logType').value, index:document.getElementById('logIndex').value.trim(), address:document.getElementById('logAddress').value.trim(), read_only:true };
+  if(!rec.name){ toast('请填写名称'); return; }
+  if(i<0) state.log_sources.push(rec); else state.log_sources[i]=rec;
+  renderLogList(); cancelLog(); toast('日志源已保存（点「保存项目配置」持久化）');
+}
+function delLog(i){ state.log_sources.splice(i,1); renderLogList(); toast('已删除'); }
+async function testLogSource(){
+  const rec = { name:document.getElementById('logName').value.trim(), log_type:document.getElementById('logType').value, address:document.getElementById('logAddress').value.trim(), index:document.getElementById('logIndex').value.trim() };
+  const r = await api.test_log_source(rec);
+  if(r.ok) toast(r.message || '连接成功'); else toast('连接失败：'+r.error);
+}
+
+/* ===== 校验规则 ===== */
+function renderRuleList(){
+  const wrap = document.getElementById('ruleList');
+  if(!state.rules || !state.rules.length){ wrap.innerHTML = '<div class="muted">暂无校验规则</div>'; return; }
+  wrap.innerHTML = state.rules.map((r,i)=>`
+    <div class="cfg-row">
+      <div class="cfg-row-main">
+        <div class="cfg-row-title">${esc(r.api_pattern)} <span class="tag soft">${r.tables ? r.tables.length : 0} 表</span></div>
+        <div class="cfg-row-sub">${(r.tables||[]).map(t=>esc(t.table)).join(' · ') || '无关联表'}</div>
+      </div>
+      <div class="cfg-row-actions">
+        <button class="btn xs" onclick="editRule(${i})">编辑</button>
+        <button class="btn xs danger" onclick="delRule(${i})">删除</button>
+      </div>
+    </div>`).join('');
+}
+let _ruleTables = []; // 编辑态临时缓存的表名列表
+function renderRuleTableInputs(){
+  const wrap = document.getElementById('ruleTablesWrap');
+  if(!_ruleTables.length){ _ruleTables = ['']; }
+  wrap.innerHTML = _ruleTables.map((t,idx)=>`
+    <div class="grid g2" style="margin-top:8px;align-items:end">
+      <div class="fitem">
+        <label>关联表 ${idx+1}（db连接名.表名）</label>
+        <input class="inp rule-tbl" data-idx="${idx}" placeholder="master测试库.supplier" value="${esc(t)}">
+      </div>
+      <div class="fitem">
+        <button class="btn sm danger" ${idx===0?'disabled':''} onclick="removeRuleTable(${idx})">删除</button>
+      </div>
+    </div>`).join('');
+}
+function addRuleTable(){ _ruleTables.push(''); renderRuleTableInputs(); }
+function removeRuleTable(idx){ _ruleTables.splice(idx,1); if(!_ruleTables.length) _ruleTables=['']; renderRuleTableInputs(); }
+function editRule(i){
+  const f = document.getElementById('ruleFormWrap');
+  f.style.display = 'block';
+  if(i===undefined || i<0){
+    document.getElementById('ruleIdx').value='-1';
+    document.getElementById('ruleApi').value='';
+    _ruleTables = [''];
+  } else {
+    const r=state.rules[i];
+    document.getElementById('ruleIdx').value=i;
+    document.getElementById('ruleApi').value=r.api_pattern||'';
+    const tables = (r.tables||[]).map(t=>t.table||'').filter(Boolean);
+    _ruleTables = tables.length ? tables : [''];
+  }
+  renderRuleTableInputs();
+}
+function cancelRule(){ document.getElementById('ruleFormWrap').style.display='none'; }
+function saveRule(){
+  const i = parseInt(document.getElementById('ruleIdx').value,10);
+  const api = document.getElementById('ruleApi').value.trim();
+  if(!api){ toast('请填写 api_pattern'); return; }
+  const inputs = document.querySelectorAll('#ruleTablesWrap .rule-tbl');
+  const tables = [];
+  inputs.forEach(inp=>{
+    const v = inp.value.trim();
+    if(v) tables.push({table:v, join_field:'', remote_field:''});
+  });
+  if(!tables.length){ toast('请至少添加一张关联表'); return; }
+  const rec = { api_pattern: api, tables: tables };
+  if(i<0) state.rules.push(rec); else state.rules[i]=rec;
+  renderRuleList(); cancelRule(); toast('规则已保存（点「保存项目配置」持久化）');
+}
+function delRule(i){ state.rules.splice(i,1); renderRuleList(); toast('已删除'); }
+
+// 读取某个连接的库表，汇总到全局 tablePool
+let _tablePool = new Set();
+async function readDbTables(){
+  if(!state.db_connections.length){ toast('请先添加数据库连接'); return; }
+  for(const conn of state.db_connections){
+    const r = await api.list_db_tables(conn);
+    if(r.ok){
+      const dbName = conn.name || conn.database;
+      r.tables.forEach(t=>_tablePool.add(`${dbName}.${t}`));
+      toast(`${dbName}：读取到 ${r.tables.length} 张表`);
+    } else {
+      toast(`${conn.name||conn.database} 读取失败：${r.error}`);
+    }
+  }
+  renderTablePool();
+  toast(`库表清单共 ${_tablePool.size} 张（已保存在内存，点「保存项目配置」可持久化到 rules 元数据）`);
+}
+function renderTablePool(){
+  const wrap = document.getElementById('tablePoolList');
+  if(!_tablePool.size){ wrap.innerHTML = '<div class="muted">尚未读取库表</div>'; return; }
+  wrap.innerHTML = Array.from(_tablePool).sort().map(t=>`<div class="cfg-row"><div class="cfg-row-main"><div class="cfg-row-title">${esc(t)}</div></div></div>`).join('');
+}
+
+// 从抓包记录一键生成规则（方案1 + 方案2 组合）
+async function autoGenRules(){
+  if(!state.sessions.length){ toast('请先抓包，再生成规则'); return; }
+  if(!state.db_connections.length){ toast('请先配置数据库连接'); return; }
+  const r = await api.auto_rules_from_sessions({
+    sessions: state.sessions,
+    db_connections: state.db_connections,
+  });
+  if(!r.ok){ toast('生成失败：'+r.error); return; }
+  const gen = r.rules || [];
+  if(!gen.length){ toast('未从抓包中推断出任何规则，请检查接口命名或库表'); return; }
+  // 合并：已存在的 api_pattern 不覆盖，只追加新的
+  const existing = new Set((state.rules||[]).map(x=>x.api_pattern));
+  let added = 0, autoTables = 0;
+  gen.forEach(rule=>{
+    if(!existing.has(rule.api_pattern)){
+      state.rules.push(rule);
+      existing.add(rule.api_pattern);
+      added++;
+    }
+    autoTables += (rule.tables||[]).length;
+  });
+  // 同步库表清单到 tablePool 展示
+  gen.forEach(rule=>(rule.tables||[]).forEach(t=>_tablePool.add(t.table)));
+  renderRuleList(); renderTablePool();
+  toast(`已生成 ${added} 条规则（共关联 ${autoTables} 张表），点「保存项目配置」生效`);
+}
+async function testAllConnections(){
+  for(let i=0;i<state.db_connections.length;i++){ const r=await api.test_db_connection(state.db_connections[i]); toast((state.db_connections[i].name||'DB')+'：'+(r.ok?'成功':'失败 '+r.error)); }
+  for(let i=0;i<state.log_sources.length;i++){ const r=await api.test_log_source(state.log_sources[i]); toast((state.log_sources[i].name||'LOG')+'：'+(r.ok?'成功':'失败 '+r.error)); }
+  if(!state.db_connections.length && !state.log_sources.length) toast('暂无可测试的连接');
+}
+function esc(s){ return s==null ? '' : String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function updateConnStatus(){
+  const elDb = document.getElementById('sbDb'); const elLog = document.getElementById('sbLog');
+  if(elDb){ elDb.className = state.db_connections.length ? 'seg d-ok' : 'seg d-warn'; elDb.innerHTML = '<span class="d"></span>数据库 '+(state.db_connections.length?'已配置':'未配置'); }
+  if(elLog){ elLog.className = state.log_sources.length ? 'seg d-ok' : 'seg d-warn'; elLog.innerHTML = '<span class="d"></span>日志 '+(state.log_sources.length?'已配置':'未配置'); }
+}
+function updateAiStatus(){
+  const el = document.getElementById('sbAi');
+  const hasKey = !!state.ai.api_key;
+  el.className = hasKey ? 'seg d-ok' : 'seg d-warn';
+  el.innerHTML = '<span class="d"></span>AI ' + (hasKey ? '可用' : '未配置');
+  document.getElementById('connStatus').children[3].innerHTML = hasKey ? '<span class="ok">已配置 · ' + state.ai.model + '</span>' : '未配置';
+}
+
+/* ===== Command palette ===== */
+function openCM(){document.getElementById('cmOverlay').classList.add('show');document.getElementById('cmInput').focus();}
+function closeCM(){document.getElementById('cmOverlay').classList.remove('show');}
+document.getElementById('cmList').querySelectorAll('[data-go]').forEach(i=>i.addEventListener('click',()=>{go(i.dataset.go);closeCM();}));
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCM();}
+  if(e.key==='Escape'){closeCM();hideCtx();}
+});
+
+/* ===== Context menu ===== */
+function showCtx(x,y){const c=document.getElementById('ctx');c.style.left=x+'px';c.style.top=y+'px';c.classList.add('show');}
+function hideCtx(){document.getElementById('ctx').classList.remove('show');}
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('#screen-capture tbody tr')){e.preventDefault();showCtx(e.clientX,e.clientY);}
+});
+document.addEventListener('click',()=>hideCtx());
+
+/* ===== Resizable inspector ===== */
+(function(){
+  const d=document.getElementById('divider'),body=document.getElementById('body');
+  let drag=false;
+  d.addEventListener('mousedown',e=>{drag=true;document.body.style.cursor='col-resize';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const w=window.innerWidth-e.clientX;
+    const nw=Math.max(260,Math.min(520,w));
+    document.documentElement.style.setProperty('--inspector-w',nw+'px');
+  });
+  document.addEventListener('mouseup',()=>{drag=false;document.body.style.cursor='';});
+})();
+</script>
+</body>
+</html>
