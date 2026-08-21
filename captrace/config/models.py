@@ -56,6 +56,7 @@ class DbConnection:
     user: str
     password: str = ""
     read_only: bool = True  # 强制只读，禁止写
+    env: Env = Env.TEST     # 前端配置保存的环境标识
 
 
 @dataclass

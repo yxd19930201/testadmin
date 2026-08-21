@@ -1,0 +1,13 @@
+# captrace 推送白名单
+#
+# 在这里添加需要同步到 captrace 抓包测效助手的 host 后缀（每行一个）。
+# 匹配规则：host 等于该值，或 host 以 "." + 该值结尾。
+# 例：
+#   adtest.virtual.007ka.cn   ← 匹配 adtest.virtual.007ka.cn 与 *.adtest.virtual.007ka.cn
+#   api.example.com           ← 匹配 api.example.com 与 *.api.example.com
+#
+# 留空时只放过内置业务域（当前只有 adtest.virtual.007ka.cn）。
+#
+# 注释行以 # 开头；空行忽略。
+#
+# 注意：修改本文件后，在 Fiddler 里按 Ctrl+R 重新加载脚本即可，无需重启。

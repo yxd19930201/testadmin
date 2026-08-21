@@ -35,5 +35,4 @@ env/
 .workbuddy/
 
 # 误生成的临时文件
-$null
-$null).Name
+$null*

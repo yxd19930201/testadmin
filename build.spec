@@ -27,7 +27,6 @@ a = Analysis(
         "captrace.connectors.ai",
         "captrace.capture.receiver",
         "captrace.capture.saz_import",
-        "captrace.capture.local_proxy",
         "webview",
     ],
     hookspath=[],

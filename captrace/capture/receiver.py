@@ -52,3 +52,12 @@ def _make_handler(on_session: Callable[[Session], None]):
 def start(port: int = 9090, on_session: Callable[[Session], None] = print) -> ThreadingHTTPServer:
     srv = ThreadingHTTPServer(("127.0.0.1", port), _make_handler(on_session))
     return srv  # 调用方 srv.serve_forever()
+
+
+def is_port_listening(port: int = 9090) -> bool:
+    """探测本机指定端口是否已在监听（用于状态显示，覆盖外部进程占用场景）。"""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.5)
+        return sock.connect_ex(("127.0.0.1", port)) == 0

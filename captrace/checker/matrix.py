@@ -37,6 +37,14 @@ def build_matrix(fields: dict[str, dict[str, Any]]) -> list[MatrixField]:
             continue
 
         values = list(present.values())
+        # 只有单侧来源时，不存在"一致"或"不一致"，应标为 partial（缺少对照）
+        if len(values) == 1:
+            only_source = list(present.keys())[0]
+            results.append(
+                MatrixField(name, sources, "partial", f"仅 {only_source} 侧有值，缺少其他来源对照")
+            )
+            continue
+
         floats = [_to_float(v) for v in values]
         if all(f is not None for f in floats):
             # 数值比较（带极小容差）
@@ -63,4 +71,5 @@ def has_anomaly(matrix: list[MatrixField]) -> bool:
 def summarize(matrix: list[MatrixField]) -> str:
     bad = sum(1 for m in matrix if m.conclusion == "inconsistent")
     ok = sum(1 for m in matrix if m.conclusion == "consistent")
-    return f"✗ {bad} 项不一致 · ✓ {ok} 项一致"
+    partial = sum(1 for m in matrix if m.conclusion == "partial")
+    return f"✗ {bad} 项不一致 · ✓ {ok} 项一致 · ◑ {partial} 项缺少对照"

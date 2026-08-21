@@ -4,8 +4,23 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from captrace.config.models import (
-    AiModelConfig, CheckRule, DbConnection, Env, LogSource,
+    AiModelConfig, CheckRule, DbConnection, DbType, Env, LogSource,
 )
+
+
+def _default_db_port(db_type: str) -> int:
+    return {"mysql": 3306, "postgres": 5432, "hologres": 5432, "sqlite": 0}.get(
+        (db_type or "").lower(), 3306
+    )
+
+
+def _normalize_port(raw: Any, db_type: str) -> int:
+    if raw is None or raw == "" or str(raw).lower() == "none":
+        return _default_db_port(db_type)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return _default_db_port(db_type)
 
 
 class ProjectConfig:
@@ -32,7 +47,14 @@ class ProjectConfig:
     @classmethod
     def from_dict(cls, d: dict) -> "ProjectConfig":
         p = cls(d["name"], Env(d.get("env", "test")))
-        p.db_connections = [DbConnection(**x) for x in d.get("db_connections", [])]
+        db_conns = []
+        for x in d.get("db_connections", []):
+            x = dict(x)
+            db_type = x.get("db_type", "mysql")
+            x["port"] = _normalize_port(x.get("port"), db_type)
+            x["db_type"] = DbType(db_type)
+            db_conns.append(DbConnection(**x))
+        p.db_connections = db_conns
         p.log_sources = [LogSource(**x) for x in d.get("log_sources", [])]
         p.rules = [CheckRule(**x) for x in d.get("rules", [])]
         p.table_pool = d.get("table_pool", []) or []
