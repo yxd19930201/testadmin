@@ -875,15 +875,62 @@ class Api:
                         logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"表 {table_full} 所有反查策略均无结果"})
                     return None
 
-                # 非列表接口：直接用入参业务条件
+                # 非列表接口（多为 submit/保存类写接口）：
+                # 写接口出参通常返回刚写入行的主键，应优先用出参首行的语义主键精确反查，
+                # 而不是直接拿入参草稿去匹配存量行（极易因字段差异落空）。
+                # 若出参无 id，则按入参业务条件反查，并做弱字段分层回退。
+                if response_first_row:
+                    conds, params = _build_resp_conditions(response_first_row, only_unique=True)
+                    # 仅保留与当前表列对应的条件（去掉通用 id 兜底的空条件）
+                    conds = [c for c in conds if c]
+                    if conds:
+                        if logs:
+                            logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"非列表接口：用出参首行主键反查 {table_full}：{' AND '.join(conds)} 参数: {params}"})
+                        rows = _exec(conds, params, "出参主键反查", limit=1)
+                        if rows:
+                            return _first(rows)
+                        if logs:
+                            logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"出参主键在 {table_full} 未命中，回退入参条件反查"})
+
+                # 弱业务字段：这些字段差异大（描述/备注/背景等），不宜全部 AND 等值拼接
+                weak_biz_fields = {
+                    "remark", "remarks", "description", "descriptions", "background",
+                    "backgroundinfo", "note", "notes", "memo", "comment", "comments",
+                    "requirementbackground", "paymentdescription", "supplierchanneldescription",
+                    "summary", "remarkinfo",
+                }
+
                 if biz_conditions:
-                    if logs:
-                        logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"非列表接口：用入参业务条件反查：{', '.join(c.split(' = ')[0] for c in biz_conditions)}"})
-                    rows = _exec(biz_conditions, biz_params, "入参业务条件", limit=1)
-                    return _first(rows)
+                    # 第一层：全部入参业务条件（强+弱）
+                    rows = _exec(biz_conditions, biz_params, "入参业务条件(全)", limit=1)
+                    if rows:
+                        if logs:
+                            logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"非列表接口：入参业务条件命中 {table_full}"})
+                        return _first(rows)
+
+                    # 第二层：仅强业务字段（去掉弱字段），避免描述类差异导致整条落空
+                    strong_conditions = []
+                    strong_params = {}
+                    for cond in biz_conditions:
+                        # cond 形如 "col = :pN"，提取对应参数名
+                        token = cond.split(" = ")[-1].strip()
+                        param_name = token[1:] if token.startswith(":") else None
+                        if param_name and param_name in biz_params:
+                            # 用列名归一化判断是否为弱字段
+                            col = cond.split(" ")[0]
+                            if self._norm_field_key(col) in weak_biz_fields:
+                                continue
+                            strong_conditions.append(cond)
+                            strong_params[param_name] = biz_params[param_name]
+                    if strong_conditions:
+                        if logs:
+                            logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"非列表接口：全条件落空，去掉弱字段重试 {table_full}：{', '.join(c.split(' = ')[0] for c in strong_conditions)}"})
+                        rows = _exec(strong_conditions, strong_params, "入参业务条件(强字段)", limit=1)
+                        if rows:
+                            return _first(rows)
 
                 if logs:
-                    logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"表 {table_full} 无可用匹配条件，跳过反查（避免大表扫描）"})
+                    logs.append({"time": time.strftime("%H:%M:%S"), "level": "INFO", "msg": f"表 {table_full} 所有反查策略均无结果，跳过反查"})
                 return None
         except Exception as e:  # noqa: BLE001
             msg = f"查表 {table_full} 失败: {type(e).__name__}: {e}"

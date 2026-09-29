@@ -73,11 +73,18 @@ def extract_response_fields(session: Session) -> dict[str, Any]:
 
 
 def extract_response_list_first(session: Session) -> dict[str, Any] | None:
-    """如果出参是列表，返回第一条记录的完整字段字典。"""
+    """返回出参的「首行」。
+
+    兼容两种形态：
+    - 列表接口：data.list[0] 或 data.<任意list字段>[0]
+    - 单对象接口（如 submit 写接口）：data 本身就是一条记录（含 id 等字段），
+      直接把该 dict 当作首行返回，使下游优先用其 id 精确反查刚写入的行。
+    """
     data = _safe_json(session.response_body)
     if isinstance(data.get("data"), dict):
         data = data["data"]
 
+    # 列表形态
     list_key = None
     if isinstance(data.get("list"), list):
         list_key = "list"
@@ -86,17 +93,23 @@ def extract_response_list_first(session: Session) -> dict[str, Any] | None:
             if isinstance(v, list) and v:
                 list_key = k
                 break
+    if list_key and data[list_key]:
+        first = data[list_key][0]
+        if isinstance(first, dict):
+            return first
 
-    if not list_key or not data[list_key]:
-        return None
-    first = data[list_key][0]
-    if not isinstance(first, dict):
-        return None
-    return first
+    # 单对象形态：data 本身是一条记录
+    if isinstance(data, dict) and data:
+        return data
+    return None
 
 
 def extract_response_list_first_id(session: Session) -> Any | None:
-    """如果出参是列表，取第一条记录的主键（id / supplierId / orderId 等）。"""
+    """取「首行」的主键（id / supplierId / orderId 等）。
+
+    不仅列表接口，单对象写接口（submit）返回的对象含 id 时同样返回，
+    使写接口的自动反查能直接按返回主键精确命中库里刚落地的行。
+    """
     first = extract_response_list_first(session)
     if not first:
         return None
@@ -104,6 +117,8 @@ def extract_response_list_first_id(session: Session) -> Any | None:
     id_keys = (
         "id", "euserId", "supplierId", "orderId", "userId", "customerId",
         "recordId", "categoryId", "goodId", "productId", "portId",
+        "applicationId", "applicationNo", "procurementApplicationId",
+        "paymentApplicationId", "detailId", "subOrderId",
     )
     for key in id_keys:
         v = first.get(key)
