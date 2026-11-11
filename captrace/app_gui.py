@@ -1488,6 +1488,16 @@ def main() -> None:
         frameless=True,  # 使用 HTML 内自定义 titlebar，去掉系统标题栏避免双抬头
     )
     api._window = window
+    # 启动即自动开启 9090 接收服务：省去手动点「开始实时捕获」，
+    # Fiddler 推送随时可进，端口被外部占用时静默跳过（前端会显示「外部占用」）。
+    try:
+        started = api.serve_start(9090)
+        if started.get("ok"):
+            print(f"[captrace] 9090 接收服务已自动启动：{started}", flush=True)
+        else:
+            print(f"[captrace] 9090 自动启动失败（可忽略，手动点按钮重试）：{started}", flush=True)
+    except Exception as _e:  # noqa: BLE001
+        print(f"[captrace] 9090 自动启动异常：{_e}", flush=True)
     webview.start()
 
 
