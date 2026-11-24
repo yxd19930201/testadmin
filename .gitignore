@@ -16,6 +16,7 @@ __pycache__/
 
 # 运行时日志
 http.log
+*.log
 
 # 用户本地配置（含数据库连接等，不入库）
 .captrace/
@@ -36,3 +37,5 @@ env/
 
 # 误生成的临时文件
 $null*
+err.txt
+out.txt
